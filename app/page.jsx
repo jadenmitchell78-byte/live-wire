@@ -168,10 +168,12 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
       {/* Render Embed OR Video */}
       {stream?.type === 'embed' ? (
         <iframe
+          key={stream.url}
           src={stream.url}
-          className="w-full h-full border-0"
+          className="w-full h-full border-0 bg-black"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
+          referrerPolicy="no-referrer"
         />
       ) : (
         <video
