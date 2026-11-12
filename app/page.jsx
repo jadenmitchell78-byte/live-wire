@@ -38,26 +38,37 @@ const CATEGORIES = [
 
 const FALLBACK_CHANNELS = [
   {
-    id: 'fallback-cbs',
-    title: 'CBS Sports HQ (24/7 Live Sports Desk)',
+    id: 'fallback-espn',
+    title: 'ESPN Main Broadcast Desk',
     category: 'Channels',
-    league: 'CBS SPORTS HQ',
+    league: 'ESPN HD',
     status: 'LIVE 24/7',
     isLive: true,
     homeTeam: {
-      name: 'CBS Sports',
+      name: 'ESPN USA',
       score: 'LIVE',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png'
+      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nba.png'
     },
     awayTeam: {
-      name: 'HQ Live',
+      name: 'SportsCenter',
       score: '24/7',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nba.png'
+      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png'
     },
     servers: [
       {
-        name: 'Server 1 (CBS Sports HQ Direct HLS)',
+        name: 'Server 1 (ESPN Live HD)',
+        type: 'embed',
+        url: 'https://embedme.top/embed/alpha/espn/1'
+      },
+      {
+        name: 'Server 2 (Red Bull TV Sports HLS)',
         type: 'hls',
+        url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
+      },
+      {
+        name: 'Server 3 (CBS Sports HQ Direct HLS)',
+        type: 'hls',
+        proxyRequired: true,
         url: 'https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8'
       }
     ]
@@ -67,23 +78,28 @@ const FALLBACK_CHANNELS = [
 function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
-  const [status, setStatus] = useState('loading');
-  const [resolution, setResolution] = useState('AUTO HD');
+  const [status, setStatus] = useState('loading'); // 'loading' | 'playing' | 'error'
+  const [resolution, setResolution] = useState('1080p60');
   const [retrySeed, setRetrySeed] = useState(0);
+
+  const shouldProxy = useProxy || stream?.proxyRequired;
 
   const finalUrl = useMemo(() => {
     if (!stream?.url) return '';
-    if (useProxy && stream.type === 'hls') {
+    if (shouldProxy && stream.type === 'hls') {
       return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
     }
     return stream.url;
-  }, [stream, useProxy]);
+  }, [stream, shouldProxy]);
 
   useEffect(() => {
     if (!stream) return;
+
+    // If it's an iframe embed, show loading briefly then reveal player
     if (stream.type === 'embed') {
-      setStatus('playing');
-      return;
+      setStatus('loading');
+      const timer = setTimeout(() => setStatus('playing'), 1200);
+      return () => clearTimeout(timer);
     }
 
     const video = videoRef.current;
@@ -91,27 +107,19 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
 
     setStatus('loading');
 
+    // Safety timeout so "Connecting to Live Sports Feed..." never hangs forever
+    const stallTimeout = setTimeout(() => {
+      if (video.readyState >= 2) {
+        setStatus('playing');
+      }
+    }, 5000);
+
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    // Direct MP4 clip support (for official ESPN in-game highlight feeds)
-    if (finalUrl.includes('.mp4')) {
-      video.src = finalUrl;
-      video.onloadedmetadata = () => {
-        setResolution('1080p CLIP');
-        setStatus('playing');
-        video.play().catch(() => {
-          video.muted = true;
-          video.play().catch(() => {});
-        });
-      };
-      video.onerror = () => setStatus('error');
-      return;
-    }
-
-    if (Hls.isSupported()) {
+    if (Hls.isSupported() && finalUrl.includes('.m3u8')) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -150,16 +158,21 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
           }
         }
       });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    } else {
+      // Native Safari HLS or direct MP4 highlight clip
       video.src = finalUrl;
-      video.onloadedmetadata = () => {
+      video.onloadeddata = () => {
         setStatus('playing');
-        video.play().catch(() => {});
+        video.play().catch(() => {
+          video.muted = true;
+          video.play().catch(() => {});
+        });
       };
       video.onerror = () => setStatus('error');
     }
 
     return () => {
+      clearTimeout(stallTimeout);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -179,31 +192,37 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/10 shadow-2xl group">
+      {/* Top Status Overlay */}
       <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-xs font-bold tracking-wider uppercase text-white line-clamp-1">{title}</span>
-          {subtitle && <span className="text-xs text-gray-400 hidden sm:inline">• {subtitle}</span>}
+        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 max-w-[75%]">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-bold tracking-wider uppercase text-white truncate">
+            {title}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[11px] font-mono text-emerald-400 shrink-0">
+        <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[11px] font-mono text-emerald-400">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          {resolution}
+          {stream?.type === 'embed' ? 'LIVE HD' : resolution}
         </div>
       </div>
 
+      {/* Loading Spinner */}
       {status === 'loading' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/85">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 pointer-events-none">
           <RefreshCw className="w-8 h-8 text-red-500 animate-spin mb-2" />
-          <span className="text-xs text-gray-300 font-medium tracking-wide">Connecting to Live Sports Feed...</span>
+          <span className="text-xs text-gray-300 font-medium tracking-wide">
+            Connecting to Live Sports Feed...
+          </span>
         </div>
       )}
 
+      {/* Error Recovery Overlay */}
       {status === 'error' && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-amber-500 mb-2" />
-          <p className="text-sm font-semibold text-white mb-1">Feed Temporarily Unavailable</p>
+          <p className="text-sm font-semibold text-white mb-1">Feed Unavailable on This Server</p>
           <p className="text-xs text-gray-400 max-w-md mb-4">
-            Switch to another server in the Match Center below or toggle CORS Proxy.
+            Tap another Broadcast Server right below the scoreboard or toggle CORS Proxy.
           </p>
           <button
             onClick={() => setRetrySeed((s) => s + 1)}
@@ -214,17 +233,21 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
         </div>
       )}
 
+      {/* Render Embed OR Video */}
       {stream?.type === 'embed' ? (
         <iframe
-          key={stream.url}
+          key={`${stream.url}-${retrySeed}`}
           src={stream.url}
-          className="w-full h-full border-0 bg-[#090a0f]"
+          onLoad={() => setStatus('playing')}
+          className="w-full h-full border-0 bg-black"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
+          referrerPolicy="no-referrer"
         />
       ) : (
         <video
           ref={videoRef}
+          onPlaying={() => setStatus('playing')}
           className="w-full h-full object-contain bg-black"
           controls
           playsInline
@@ -232,6 +255,7 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
         />
       )}
 
+      {/* Quick Floating Controls */}
       {stream?.type !== 'embed' && (
         <div className="absolute bottom-14 right-3 z-20 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
@@ -318,7 +342,7 @@ export default function LiveWireApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Whenever user selects a live NBA/NFL/College/Soccer game, pull live video clips for that exact game from ESPN Summary API
+  // Fetch optional ESPN in-game highlight clips and append to the end of the servers list
   useEffect(() => {
     setGameClips([]);
     if (!selectedEvent?.espnEventId || !selectedEvent?.sportPath) return;
@@ -341,7 +365,7 @@ export default function LiveWireApp() {
               v.links?.source?.full?.href;
             if (!url) return null;
             return {
-              name: `Live Highlight: ${v.headline || 'In-Game Clip'}`,
+              name: `Highlight: ${v.headline || 'In-Game Clip'}`,
               type: 'hls',
               url
             };
@@ -351,7 +375,7 @@ export default function LiveWireApp() {
 
         if (extracted.length > 0) {
           setGameClips(extracted);
-          setServerIdx(0); // Automatically play the real game video first!
+          // Keep serverIdx intact so Server 1 (Live Game Broadcast) remains the active playing stream!
         }
       })
       .catch(() => {});
@@ -359,10 +383,10 @@ export default function LiveWireApp() {
     return () => controller.abort();
   }, [selectedEvent?.id]);
 
-  // Combine real in-game ESPN clips with the 24/7 sports broadcast servers
+  // Combine servers: Live Match Broadcasts & Streams FIRST, followed by extra ESPN clips
   const combinedServers = useMemo(() => {
     const base = selectedEvent?.servers || [];
-    return [...gameClips, ...base];
+    return [...base, ...gameClips];
   }, [gameClips, selectedEvent]);
 
   const activeServer = combinedServers[serverIdx] || combinedServers[0];
@@ -571,29 +595,34 @@ export default function LiveWireApp() {
                           Select Broadcast / In-Game Feed ({combinedServers.length})
                         </label>
                         <div className="grid grid-cols-1 gap-1.5">
-                          {combinedServers.map((srv, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setServerIdx(idx)}
-                              className={`w-full px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between border transition text-left ${
-                                serverIdx === idx
-                                  ? 'bg-red-600/20 border-red-500 text-white'
-                                  : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
-                              }`}
-                            >
-                              <span className="flex items-center gap-2 line-clamp-1 pr-2">
-                                {srv.name.startsWith('Live Highlight') ? (
-                                  <Film className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                ) : (
-                                  <Play className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                )}
-                                <span className="truncate">{srv.name}</span>
-                              </span>
-                              <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-white/10 shrink-0">
-                                {srv.type}
-                              </span>
-                            </button>
-                          ))}
+                          {combinedServers.map((srv, idx) => {
+                            const isHighlight =
+                              srv.name.startsWith('Live Highlight') ||
+                              srv.name.startsWith('Highlight:');
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => setServerIdx(idx)}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between border transition text-left ${
+                                  serverIdx === idx
+                                    ? 'bg-red-600/20 border-red-500 text-white'
+                                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2 line-clamp-1 pr-2">
+                                  {isHighlight ? (
+                                    <Film className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  ) : (
+                                    <Play className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                  )}
+                                  <span className="truncate">{srv.name}</span>
+                                </span>
+                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-white/10 shrink-0">
+                                  {srv.type}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
