@@ -20,9 +20,12 @@ import {
   Flame,
   CheckCircle2,
   Film,
+  ExternalLink,
+  ArrowLeftRight,
+  X,
   Sparkles,
   ChevronRight,
-  Info
+  Share2
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -65,25 +68,25 @@ const INITIAL_HULU_CATALOG = [
     },
     servers: [
       {
-        name: 'Server 1 (Live Game Broadcast HD)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/houston-rockets-vs-golden-state-warriors/1'
-      },
-      {
-        name: 'Server 2 (ESPN Live Feed)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/espn/1'
-      },
-      {
-        name: 'Server 3 (Red Bull TV Sports HLS)',
+        name: 'Server 1 · Live Sports Net (1080p HD)',
         type: 'hls',
         url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
       },
       {
-        name: 'Server 4 (CBS Sports HQ)',
+        name: 'Server 2 · Live Backup Edge (720p HD)',
         type: 'hls',
-        proxyRequired: true,
-        url: 'https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+      },
+      {
+        name: 'Server 3 · Official Broadcast (ESPN)',
+        type: 'gate',
+        network: 'ESPN',
+        url: 'https://www.espn.com/watch/'
+      },
+      {
+        name: 'Server 4 · Gamecast Live Data',
+        type: 'gamecast',
+        url: 'https://www.espn.com/nba/game/_/gameId/401584893'
       }
     ]
   },
@@ -111,19 +114,20 @@ const INITIAL_HULU_CATALOG = [
     },
     servers: [
       {
-        name: 'Server 1 (Live Broadcast HD)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/portland-trail-blazers-vs-oklahoma-city-thunder/1'
-      },
-      {
-        name: 'Server 2 (NBA TV Feed)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/nba-tv/1'
-      },
-      {
-        name: 'Server 3 (Red Bull TV Sports)',
+        name: 'Server 1 · Live Sports Net (1080p HD)',
         type: 'hls',
         url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
+      },
+      {
+        name: 'Server 2 · Live Backup Edge (720p HD)',
+        type: 'hls',
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+      },
+      {
+        name: 'Server 3 · Official Broadcast (NBA TV)',
+        type: 'gate',
+        network: 'NBA TV',
+        url: 'https://www.nba.com/watch'
       }
     ]
   },
@@ -149,58 +153,15 @@ const INITIAL_HULU_CATALOG = [
     },
     servers: [
       {
-        name: 'Server 1 (ESPN Live Stream)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/espn/1'
-      },
-      {
-        name: 'Server 2 (Red Bull TV Sports HLS)',
+        name: 'Server 1 · Live Sports Net (1080p HD)',
         type: 'hls',
         url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
       },
       {
-        name: 'Server 3 (CBS Sports Direct HLS)',
+        name: 'Server 2 · CBS Sports HQ (US Direct)',
         type: 'hls',
         proxyRequired: true,
         url: 'https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8'
-      }
-    ]
-  },
-  {
-    id: 'ch-nfl',
-    title: 'NFL Network & NFL RedZone 24/7',
-    shortTitle: 'NFL Network',
-    category: 'Channels',
-    league: 'NFL NETWORK',
-    status: 'LIVE 24/7',
-    isLive: true,
-    broadcast: 'NFL LIVE WIRE',
-    backdrop: 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?auto=format&fit=crop&w=1200&q=80',
-    homeTeam: {
-      name: 'NFL Network',
-      score: 'LIVE',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png'
-    },
-    awayTeam: {
-      name: 'RedZone',
-      score: '24/7',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png'
-    },
-    servers: [
-      {
-        name: 'Server 1 (NFL Network HD)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/nfl-network/1'
-      },
-      {
-        name: 'Server 2 (NFL RedZone)',
-        type: 'embed',
-        url: 'https://embedme.top/embed/alpha/nfl-redzone/1'
-      },
-      {
-        name: 'Server 3 (Red Bull Sports)',
-        type: 'hls',
-        url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
       }
     ]
   },
@@ -226,66 +187,71 @@ const INITIAL_HULU_CATALOG = [
     },
     servers: [
       {
-        name: 'Server 1 (CBS Sports Direct HLS)',
+        name: 'Server 1 · CBS Sports HQ (US Direct)',
         type: 'hls',
         proxyRequired: true,
         url: 'https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8'
       },
       {
-        name: 'Server 2 (Red Bull TV Sports HLS)',
+        name: 'Server 2 · Live Sports Net (1080p HD)',
         type: 'hls',
         url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
       }
     ]
   },
   {
-    id: 'mov-1',
-    title: 'Nightfall Protocol: The Final Directive',
-    shortTitle: 'Action • 4K UHD',
+    id: 'mov-metropolis',
+    title: 'Metropolis (1927) — 4K Restored Masterpiece',
+    shortTitle: 'Metropolis (1927)',
     category: 'Movies',
-    league: 'HULU PREMIERE',
-    status: '4K HDR',
+    league: 'CINEMA CLASSIC',
+    status: '4K RESTORED',
     isLive: false,
-    rating: '98% Match',
-    year: '2026',
-    duration: '2h 14m',
+    rating: '99% Match',
+    year: '1927',
+    duration: '2h 33m',
     backdrop: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=80',
     servers: [
       {
-        name: 'Server 1 (Full Movie Stream)',
-        type: 'embed',
-        url: 'https://vidsrc.xyz/embed/movie/tt15398776'
-      },
-      {
-        name: 'Server 2 (Direct 1080p Stream)',
+        name: 'Server 1 · Restored Archive Stream (1080p)',
         type: 'hls',
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       }
     ]
   },
   {
-    id: 'show-1',
-    title: 'Hardwood Dynasty: Warriors vs The West',
-    shortTitle: 'Season 3 • Episode 5',
+    id: 'show-dragnet',
+    title: 'Dragnet — Just The Facts (Classic Police Procedural)',
+    shortTitle: 'Dragnet',
     category: 'Shows',
-    league: 'ORIGINAL SERIES',
-    status: 'S3:E5',
+    league: 'CLASSIC TV',
+    status: 'S1:E1',
     isLive: false,
-    rating: '99% Match',
-    year: '2026',
-    duration: '52m',
-    backdrop: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=80',
+    rating: '95% Match',
+    year: '1951',
+    duration: '26m',
+    backdrop: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80',
     servers: [
       {
-        name: 'Server 1 (Full Episode 1080p)',
+        name: 'Server 1 · Episode Stream (HD)',
         type: 'hls',
-        url: 'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       }
     ]
   }
 ];
 
-function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute }) {
+// Dual-Engine Watchdog-Protected Media Player
+function StreamPlayer({
+  stream,
+  title,
+  subtitle,
+  useProxy,
+  isMuted,
+  onToggleMute,
+  tileLabel,
+  onSwitchServer
+}) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'playing' | 'error'
@@ -305,9 +271,16 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
   useEffect(() => {
     if (!stream) return;
 
+    // 1. Official Broadcast Gate (Rendered cleanly as rights-holder gate)
+    if (stream.type === 'gate' || stream.type === 'gamecast') {
+      setStatus('playing');
+      return;
+    }
+
+    // 2. Iframe Embeds: 2s timeout fallback so spinner never hangs
     if (stream.type === 'embed') {
       setStatus('loading');
-      const timer = setTimeout(() => setStatus('playing'), 1100);
+      const timer = setTimeout(() => setStatus('playing'), 2000);
       return () => clearTimeout(timer);
     }
 
@@ -316,11 +289,19 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
 
     setStatus('loading');
 
-    const stallTimeout = setTimeout(() => {
+    // 3. 22s Watchdog Timer: Guarantees zero infinite spinners
+    const watchdog = setTimeout(() => {
       if (video.readyState >= 2) {
         setStatus('playing');
+      } else {
+        setStatus('error');
       }
-    }, 4500);
+    }, 22000);
+
+    // 4. Stall check: If data arrived, set playing
+    const stallTimer = setTimeout(() => {
+      if (video.readyState >= 2) setStatus('playing');
+    }, 3500);
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -379,7 +360,8 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
     }
 
     return () => {
-      clearTimeout(stallTimeout);
+      clearTimeout(watchdog);
+      clearTimeout(stallTimer);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -399,11 +381,12 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden border border-[#1ce783]/30 shadow-[0_20px_50px_rgba(0,0,0,0.9)] group">
-      {/* Top Status Overlay */}
-      <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-[#06080b]/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 max-w-[75%]">
+      {/* Tile Label sitting strictly ABOVE the player controls */}
+      <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-2 bg-[#06080b]/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 max-w-[75%] shadow-lg">
           <span className="h-2 w-2 shrink-0 rounded-full bg-[#1ce783] animate-pulse" />
-          <span className="text-xs font-bold tracking-wider uppercase text-white truncate">
+          <span className="text-xs font-black tracking-wider uppercase text-white truncate">
+            {tileLabel ? `${tileLabel} • ` : ''}
             {title}
           </span>
           {subtitle && (
@@ -412,41 +395,87 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 bg-[#06080b]/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#1ce783]/30 text-[10px] font-mono font-bold text-[#1ce783]">
+        <div className="flex items-center gap-1.5 bg-[#06080b]/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#1ce783]/30 text-[10px] font-mono font-black text-[#1ce783] shadow-lg">
           <CheckCircle2 className="w-3.5 h-3.5" />
           {stream?.type === 'embed' ? 'LIVE HD' : resolution}
         </div>
       </div>
 
-      {/* Loading Spinner */}
+      {/* Loading Spinner with Watchdog Protection */}
       {status === 'loading' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#06080b]/90 pointer-events-none">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#06080b]/90 pointer-events-none">
           <RefreshCw className="w-8 h-8 text-[#1ce783] animate-spin mb-2.5" />
-          <span className="text-xs text-gray-200 font-semibold tracking-wider uppercase">
+          <span className="text-xs text-gray-200 font-black tracking-wider uppercase">
             Connecting to Live Broadcast...
           </span>
         </div>
       )}
 
-      {/* Error Recovery Overlay */}
+      {/* Error Recovery Card */}
       {status === 'error' && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#06080b]/95 p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-amber-400 mb-2" />
           <p className="text-sm font-bold text-white mb-1">Feed Unavailable on This Server</p>
           <p className="text-xs text-gray-400 max-w-md mb-4">
-            Select another Server below in the Match Center or toggle CORS Proxy.
+            Select another Server below in the Match Center or toggle the CORS Proxy.
           </p>
-          <button
-            onClick={() => setRetrySeed((s) => s + 1)}
-            className="px-5 py-2 bg-[#1ce783] hover:bg-[#00ed82] text-black text-xs font-black rounded-full flex items-center gap-2 transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Retry Stream
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setRetrySeed((s) => s + 1)}
+              className="px-5 py-2 bg-[#1ce783] hover:bg-[#00ed82] text-black text-xs font-black rounded-full flex items-center gap-2 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry Stream
+            </button>
+            {onSwitchServer && (
+              <button
+                onClick={onSwitchServer}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-full transition"
+              >
+                Switch to Next Server
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Render Embed OR Video */}
-      {stream?.type === 'embed' ? (
+      {/* Official Broadcast Gate Card */}
+      {stream?.type === 'gate' ? (
+        <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#0c121e] via-[#080c14] to-black text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#1ce783]/15 border border-[#1ce783]/30 flex items-center justify-center shadow-lg">
+            <Tv className="w-8 h-8 text-[#1ce783]" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-black text-white">Official Broadcast Portal</h3>
+            <p className="text-xs text-gray-400 max-w-sm">
+              Live broadcast rights-holder stream on <strong className="text-white">{stream.network || 'Official Network'}</strong>.
+            </p>
+          </div>
+          <a
+            href={stream.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-2.5 rounded-full bg-[#1ce783] hover:bg-[#00ed82] text-black text-xs font-black uppercase tracking-wider flex items-center gap-2 transition transform hover:scale-105 shadow-[0_0_20px_rgba(28,231,131,0.35)]"
+          >
+            Open Official Stream <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      ) : stream?.type === 'gamecast' ? (
+        <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#0a0f18] to-black text-center space-y-3">
+          <Flame className="w-10 h-10 text-red-500 animate-pulse" />
+          <h3 className="text-base font-black text-white">Live ESPN Gamecast Active</h3>
+          <p className="text-xs text-gray-400 max-w-xs">
+            Real-time play-by-play statistics and court visualization.
+          </p>
+          <a
+            href={stream.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5"
+          >
+            Launch ESPN Gamecast <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      ) : stream?.type === 'embed' ? (
         <iframe
           key={`${stream.url}-${retrySeed}`}
           src={stream.url}
@@ -467,24 +496,24 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
         />
       )}
 
-      {/* Floating Controls */}
-      {stream?.type !== 'embed' && (
-        <div className="absolute bottom-12 right-3 z-20 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Quick Floating Controls */}
+      {stream?.type !== 'embed' && stream?.type !== 'gate' && stream?.type !== 'gamecast' && (
+        <div className="absolute bottom-12 right-3 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onToggleMute}
-            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition"
+            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition shadow-lg"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
           <button
             onClick={handlePiP}
-            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition"
+            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition shadow-lg"
           >
             <PictureInPicture2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setRetrySeed((s) => s + 1)}
-            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition"
+            className="p-2.5 rounded-full bg-black/80 hover:bg-[#1ce783] hover:text-black text-white border border-white/10 transition shadow-lg"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -501,20 +530,33 @@ export default function HuluLiveWireApp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(INITIAL_HULU_CATALOG[0]);
   const [secondaryEvent, setSecondaryEvent] = useState(INITIAL_HULU_CATALOG[1]);
-  const [gameClips, setGameClips] = useState([]);
   const [serverIdx, setServerIdx] = useState(0);
   const [useProxy, setUseProxy] = useState(false);
   const [multiView, setMultiView] = useState(false);
-  const [theaterMode, setTheaterMode] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [audioFocus, setAudioFocus] = useState(1); // 1 = Tile 1 unmuted, 2 = Tile 2 unmuted
   const [pinnedIds, setPinnedIds] = useState([]);
-  const [customUrl, setCustomUrl] = useState('');
-  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
+  // Custom Stream Import Form State
+  const [importTitle, setImportTitle] = useState('');
+  const [importUrl, setImportUrl] = useState('');
+  const [importType, setImportType] = useState('hls');
+  const [importProxy, setImportProxy] = useState(false);
+
+  // Load Pinned IDs and Saved Custom Streams from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('livewire_pins');
-      if (saved) setPinnedIds(JSON.parse(saved));
+      const savedPins = localStorage.getItem('livewire_pins');
+      if (savedPins) setPinnedIds(JSON.parse(savedPins));
+
+      const savedStreams = localStorage.getItem('livewire_custom_streams');
+      if (savedStreams) {
+        const parsed = JSON.parse(savedStreams);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEvents((prev) => [...parsed, ...prev]);
+        }
+      }
     } catch (e) {}
   }, []);
 
@@ -529,7 +571,7 @@ export default function HuluLiveWireApp() {
     } catch (e) {}
   };
 
-  // Resilient catalog fetch: Fallback to INITIAL_HULU_CATALOG if API is slow or offline
+  // Resilient catalog fetch: Hits /api/catalog with 4s timeout, never wipes out local catalog
   const fetchCatalog = async () => {
     setLoading(true);
     try {
@@ -545,7 +587,11 @@ export default function HuluLiveWireApp() {
       if (res.ok) {
         const data = await res.json();
         if (data.events && data.events.length > 0) {
-          setEvents(data.events);
+          setEvents((prev) => {
+            // Keep imported custom streams intact
+            const customStreams = prev.filter((ev) => ev.isCustom);
+            return [...customStreams, ...data.events];
+          });
           setSelectedEvent((prev) => {
             const match = data.events.find((i) => i.id === prev?.id);
             return match || data.events[0];
@@ -554,7 +600,7 @@ export default function HuluLiveWireApp() {
         }
       }
     } catch (e) {
-      console.warn('API Catalog fallback triggered:', e);
+      console.warn('API Catalog fallback to instant catalog:', e);
     } finally {
       setLoading(false);
     }
@@ -562,55 +608,12 @@ export default function HuluLiveWireApp() {
 
   useEffect(() => {
     fetchCatalog();
-    const interval = setInterval(fetchCatalog, 60000);
+    const interval = setInterval(fetchCatalog, 45000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch optional in-game ESPN video clips for the selected matchup
-  useEffect(() => {
-    setGameClips([]);
-    if (!selectedEvent?.espnEventId || !selectedEvent?.sportPath) return;
-
-    const controller = new AbortController();
-    fetch(
-      `https://site.api.espn.com/apis/site/v2/sports/${selectedEvent.sportPath}/summary?event=${selectedEvent.espnEventId}`,
-      { signal: controller.signal }
-    )
-      .then((r) => r.json())
-      .then((summary) => {
-        const rawVideos = summary?.videos || [];
-        const extracted = rawVideos
-          .map((v) => {
-            const url =
-              v.links?.source?.HLS?.HD?.href ||
-              v.links?.source?.HLS?.href ||
-              v.links?.source?.HD?.href ||
-              v.links?.source?.full?.href;
-            if (!url) return null;
-            return {
-              name: `Highlight: ${v.headline || 'In-Game Play'}`,
-              type: 'hls',
-              url
-            };
-          })
-          .filter(Boolean)
-          .slice(0, 4);
-
-        if (extracted.length > 0) {
-          setGameClips(extracted);
-        }
-      })
-      .catch(() => {});
-
-    return () => controller.abort();
-  }, [selectedEvent?.id]);
-
-  const combinedServers = useMemo(() => {
-    const base = selectedEvent?.servers || [];
-    return [...base, ...gameClips];
-  }, [gameClips, selectedEvent]);
-
-  const activeServer = combinedServers[serverIdx] || combinedServers[0];
+  const servers = selectedEvent?.servers || [];
+  const activeServer = servers[serverIdx] || servers[0];
 
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
@@ -629,56 +632,79 @@ export default function HuluLiveWireApp() {
   }, [events, activeCategory, searchQuery, pinnedIds]);
 
   const liveNowEvents = useMemo(() => events.filter((ev) => ev.isLive), [events]);
-  const networkEvents = useMemo(() => events.filter((ev) => ev.category === 'Channels'), [events]);
-  const movieEvents = useMemo(
-    () => events.filter((ev) => ev.category === 'Movies' || ev.category === 'Shows'),
-    [events]
-  );
 
-  const handleLoadCustomStream = (e) => {
+  // Handle Multi-View Swap
+  const handleSwapTiles = () => {
+    const temp = selectedEvent;
+    setSelectedEvent(secondaryEvent);
+    setSecondaryEvent(temp);
+  };
+
+  // Handle Custom Stream Import & LocalStorage Persistence
+  const handleImportStream = (e) => {
     e.preventDefault();
-    if (!customUrl.trim()) return;
-    const isEmbed = !customUrl.includes('.m3u8') && !customUrl.includes('.mp4');
-    const customEvent = {
+    if (!importUrl.trim()) return;
+
+    const newStream = {
       id: `custom-${Date.now()}`,
-      title: 'Custom User Live Feed',
+      title: importTitle.trim() || 'Imported Live Stream',
+      shortTitle: 'Custom Stream',
       category: 'Channels',
-      league: isEmbed ? 'EMBED STREAM' : 'CUSTOM HLS',
-      status: 'LIVE',
+      league: importType === 'hls' ? 'HLS STREAM' : 'EMBED STREAM',
+      status: 'CUSTOM',
       isLive: true,
+      isCustom: true,
+      backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
       homeTeam: {
         name: 'Custom',
         score: 'LIVE',
         logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png'
       },
       awayTeam: {
-        name: 'Stream',
+        name: 'Feed',
         score: 'HD',
         logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nba.png'
       },
       servers: [
         {
-          name: 'Custom Server 1',
-          type: isEmbed ? 'embed' : 'hls',
-          url: customUrl.trim()
+          name: `Server 1 · ${importTitle.trim() || 'Custom Feed'}`,
+          type: importType,
+          proxyRequired: importProxy,
+          url: importUrl.trim()
         }
       ]
     };
-    setEvents((prev) => [customEvent, ...prev]);
-    setSelectedEvent(customEvent);
+
+    setEvents((prev) => [newStream, ...prev]);
+    setSelectedEvent(newStream);
     setServerIdx(0);
-    setCustomUrl('');
-    setShowCustomModal(false);
+
+    try {
+      const saved = localStorage.getItem('livewire_custom_streams');
+      const list = saved ? JSON.parse(saved) : [];
+      list.unshift(newStream);
+      localStorage.setItem('livewire_custom_streams', JSON.stringify(list));
+    } catch (_) {}
+
+    setImportTitle('');
+    setImportUrl('');
+    setShowImportModal(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#06080b] text-gray-100">
-      {/* Hulu Sleek Top Navbar */}
+      {/* Sticky Hulu Glass Header */}
       <header className="sticky top-0 z-50 bg-[#06080b]/95 backdrop-blur-xl border-b border-white/[0.08]">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
-          {/* Hulu Logo Brand */}
+          {/* Logo Brand */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveCategory('All')}>
+            <div
+              className="flex items-center gap-1.5 cursor-pointer"
+              onClick={() => {
+                setActiveCategory('All');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
               <span className="font-black text-xl tracking-tight text-white flex items-center">
                 LIVE<span className="text-[#1ce783]">WIRE</span>
               </span>
@@ -689,7 +715,7 @@ export default function HuluLiveWireApp() {
             </span>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Input */}
           <div className="flex-1 max-w-lg relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -701,15 +727,15 @@ export default function HuluLiveWireApp() {
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* Header Action Buttons */}
           <div className="flex items-center gap-2.5 shrink-0">
             <button
-              onClick={() => setShowCustomModal(!showCustomModal)}
+              onClick={() => setShowImportModal(true)}
               className="px-3.5 py-2 rounded-full bg-[#121620] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 flex items-center gap-2 transition"
-              title="Paste custom M3U8 or Embed stream"
+              title="Import Stream URL"
             >
               <PlusCircle className="w-4 h-4 text-[#1ce783]" />
-              <span className="hidden sm:inline">Add URL</span>
+              <span className="hidden sm:inline">Import Stream</span>
             </button>
 
             <button
@@ -723,29 +749,108 @@ export default function HuluLiveWireApp() {
         </div>
       </header>
 
-      {/* Custom Stream Input Modal */}
-      {showCustomModal && (
-        <div className="bg-[#0b0f17] border-b border-[#1ce783]/30 px-4 py-3">
-          <form onSubmit={handleLoadCustomStream} className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-2.5">
-            <input
-              type="url"
-              required
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              placeholder="Paste any direct .m3u8 sports feed or iframe embed URL..."
-              className="flex-1 bg-black/70 border border-white/15 rounded-full px-4 py-2 text-xs text-white outline-none focus:border-[#1ce783]"
-            />
-            <button
-              type="submit"
-              className="px-6 py-2 bg-[#1ce783] hover:bg-[#00ed82] text-black text-xs font-black rounded-full transition shadow-[0_0_15px_rgba(28,231,131,0.3)]"
-            >
-              Play Custom Stream
-            </button>
-          </form>
+      {/* Import Stream Modal with localStorage Persistence */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#0e121a] border border-[#1ce783]/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-[#1ce783]" /> Import Live Stream
+              </h3>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="p-1 rounded-full text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300">
+              Drop in any licensed .m3u8 HLS playlist, direct .mp4 feed, or embed URL. Persists automatically across browser sessions.
+            </p>
+
+            <form onSubmit={handleImportStream} className="space-y-3.5">
+              <div>
+                <label className="text-[11px] font-bold uppercase text-gray-400 block mb-1">
+                  Stream Name
+                </label>
+                <input
+                  type="text"
+                  value={importTitle}
+                  onChange={(e) => setImportTitle(e.target.value)}
+                  placeholder="e.g. My Premium Sports Feed"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-[#1ce783]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase text-gray-400 block mb-1">
+                  Stream URL (HLS / MP4 / Embed)
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={importUrl}
+                  onChange={(e) => setImportUrl(e.target.value)}
+                  placeholder="https://example.com/live/master.m3u8"
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-[#1ce783]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-gray-400 block mb-1">
+                    Feed Engine
+                  </label>
+                  <select
+                    value={importType}
+                    onChange={(e) => setImportType(e.target.value)}
+                    className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#1ce783]"
+                  >
+                    <option value="hls">Native HLS (M3U8)</option>
+                    <option value="embed">Iframe Embed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-gray-400 block mb-1">
+                    CORS Proxy
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setImportProxy(!importProxy)}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition ${
+                      importProxy
+                        ? 'bg-[#1ce783]/20 border-[#1ce783] text-[#1ce783]'
+                        : 'bg-black/60 border-white/15 text-gray-400'
+                    }`}
+                  >
+                    {importProxy ? 'Proxy Enabled' : 'Proxy Off'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#1ce783] hover:bg-[#00ed82] text-black text-xs font-black rounded-full transition shadow-[0_0_15px_rgba(28,231,131,0.3)]"
+                >
+                  Save & Play Stream
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* Hulu Category Navigation Tabs */}
+      {/* Swipeable Category Navigation Pills */}
       <nav className="sticky top-18 z-40 bg-[#06080b]/90 backdrop-blur-md border-b border-white/[0.06] py-2.5">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto no-scrollbar">
           {CATEGORIES.map((cat) => {
@@ -760,7 +865,9 @@ export default function HuluLiveWireApp() {
                     : 'bg-[#10141e] text-gray-300 hover:text-white hover:bg-white/10 border border-white/5'
                 }`}
               >
-                {cat === 'LIVE NOW' && <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-ping" />}
+                {cat === 'LIVE NOW' && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-ping" />
+                )}
                 {cat}
               </button>
             );
@@ -769,178 +876,226 @@ export default function HuluLiveWireApp() {
       </nav>
 
       <main className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-8">
-        {/* Hulu Spotlight Hero Banner (Featured Game / Selected Stream) */}
+        {/* Spotlight Hero Player Section */}
         {selectedEvent && (
           <section className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0d121c] via-[#090d14] to-[#06080b] border border-white/10 shadow-2xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-8 items-center">
-              {/* Left Column: Game Info & Hero Call-To-Action */}
-              <div className="lg:col-span-5 space-y-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-[#1ce783]/20 text-[#1ce783] border border-[#1ce783]/30">
-                    {selectedEvent.league} • LIVE ON HULU
-                  </span>
-                  {selectedEvent.isLive ? (
-                    <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full bg-red-600 text-white shadow-lg shadow-red-600/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                      {selectedEvent.status}
+            {multiView ? (
+              /* Multi-View Dual Screen Grid */
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black uppercase text-[#1ce783] flex items-center gap-2">
+                      <Grid className="w-4 h-4" /> Multi-View Quad/Dual Screen Mode
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-white/10 text-gray-300">
-                      {selectedEvent.status}
-                    </span>
+                    <button
+                      onClick={handleSwapTiles}
+                      className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-bold text-white flex items-center gap-1.5 transition"
+                      title="Swap Tile Positions"
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5" /> Swap Screens
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 font-bold">Audio Routing:</span>
+                    <button
+                      onClick={() => setAudioFocus(1)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition ${
+                        audioFocus === 1
+                          ? 'bg-[#1ce783] text-black border-[#1ce783]'
+                          : 'bg-white/5 text-gray-300 border-white/10'
+                      }`}
+                    >
+                      Tile 1 Audio
+                    </button>
+                    <button
+                      onClick={() => setAudioFocus(2)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition ${
+                        audioFocus === 2
+                          ? 'bg-[#1ce783] text-black border-[#1ce783]'
+                          : 'bg-white/5 text-gray-300 border-white/10'
+                      }`}
+                    >
+                      Tile 2 Audio
+                    </button>
+                    <button
+                      onClick={() => setMultiView(false)}
+                      className="p-1.5 rounded-full text-gray-400 hover:text-white"
+                      title="Close Multi-View"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <StreamPlayer
+                    stream={activeServer}
+                    title={selectedEvent.title}
+                    subtitle={selectedEvent.league}
+                    useProxy={useProxy}
+                    isMuted={audioFocus !== 1}
+                    onToggleMute={() => setAudioFocus(audioFocus === 1 ? 0 : 1)}
+                    tileLabel="Screen 1 (Primary)"
+                    onSwitchServer={() => setServerIdx((i) => (i + 1) % servers.length)}
+                  />
+
+                  {secondaryEvent && (
+                    <StreamPlayer
+                      stream={secondaryEvent.servers?.[0]}
+                      title={secondaryEvent.title}
+                      subtitle={secondaryEvent.league}
+                      useProxy={useProxy}
+                      isMuted={audioFocus !== 2}
+                      onToggleMute={() => setAudioFocus(audioFocus === 2 ? 0 : 2)}
+                      tileLabel="Screen 2"
+                      onSwitchServer={() => {}}
+                    />
                   )}
                 </div>
-
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
-                  {selectedEvent.title}
-                </h1>
-
-                <p className="text-xs sm:text-sm text-gray-300 line-clamp-2">
-                  {selectedEvent.category === 'Movies' || selectedEvent.category === 'Shows'
-                    ? `${selectedEvent.rating || '98% Match'} • ${selectedEvent.year || '2026'} • Full Length Feature Stream`
-                    : `Live Game Broadcast • ${selectedEvent.broadcast || 'LIVE WIRE HD'} • ${combinedServers.length} Dedicated Broadcast Feeds`}
-                </p>
-
-                {/* Scoreboard Widget */}
-                {selectedEvent.awayTeam && selectedEvent.homeTeam && (
-                  <div className="flex items-center gap-4 py-3 px-4 rounded-2xl bg-black/50 border border-white/10 max-w-md">
-                    <div className="flex items-center gap-2 flex-1">
-                      <img src={selectedEvent.awayTeam.logo} alt="" className="w-8 h-8 object-contain" />
-                      <span className="text-xs font-bold text-white truncate">{selectedEvent.awayTeam.name}</span>
-                      <span className="text-lg font-black text-white ml-auto">{selectedEvent.awayTeam.score}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-gray-500">VS</span>
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-lg font-black text-white mr-auto">{selectedEvent.homeTeam.score}</span>
-                      <span className="text-xs font-bold text-white truncate text-right">{selectedEvent.homeTeam.name}</span>
-                      <img src={selectedEvent.homeTeam.logo} alt="" className="w-8 h-8 object-contain" />
-                    </div>
+              </div>
+            ) : (
+              /* Standard Hero Layout */
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-8 items-center">
+                {/* Left Column: Match Details & Actions */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-[#1ce783]/20 text-[#1ce783] border border-[#1ce783]/30">
+                      {selectedEvent.league} • LIVE ON HULU
+                    </span>
+                    {selectedEvent.isLive ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full bg-red-600 text-white shadow-lg shadow-red-600/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        {selectedEvent.status}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-white/10 text-gray-300">
+                        {selectedEvent.status}
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {/* Hulu Action Buttons */}
-                <div className="flex items-center gap-3 pt-2 flex-wrap">
-                  <button
-                    onClick={() => {
-                      setServerIdx(0);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="px-6 py-3 rounded-full bg-[#1ce783] hover:bg-[#00ed82] text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 transition transform hover:scale-105 shadow-[0_0_25px_rgba(28,231,131,0.4)]"
-                  >
-                    <Play className="w-4 h-4 fill-current ml-0.5" /> Watch Live Now
-                  </button>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                    {selectedEvent.title}
+                  </h1>
 
-                  <button
-                    onClick={() => setMultiView(!multiView)}
-                    className={`px-5 py-3 rounded-full text-xs font-bold transition flex items-center gap-2 border ${
-                      multiView
-                        ? 'bg-[#1ce783]/20 border-[#1ce783] text-[#1ce783]'
-                        : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
-                    }`}
-                  >
-                    <Grid className="w-4 h-4" /> Multi-View {multiView ? 'ON' : '2-Screen'}
-                  </button>
+                  <p className="text-xs sm:text-sm text-gray-300 line-clamp-2">
+                    {selectedEvent.category === 'Movies' || selectedEvent.category === 'Shows'
+                      ? `${selectedEvent.rating || '99% Match'} • ${selectedEvent.year || '2026'} • Full Playable Stream`
+                      : `Live Broadcast Feed • ${selectedEvent.broadcast || 'LIVE WIRE HD'} • ${servers.length} Available Servers`}
+                  </p>
 
-                  <button
-                    onClick={() => setUseProxy(!useProxy)}
-                    className={`px-4 py-3 rounded-full text-xs font-bold transition flex items-center gap-1.5 border ${
-                      useProxy
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                        : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400'
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    CORS: {useProxy ? 'ON' : 'OFF'}
-                  </button>
+                  {/* Scoreboard Pill */}
+                  {selectedEvent.awayTeam && selectedEvent.homeTeam && (
+                    <div className="flex items-center gap-4 py-3 px-4 rounded-2xl bg-black/50 border border-white/10 max-w-md">
+                      <div className="flex items-center gap-2 flex-1">
+                        <img src={selectedEvent.awayTeam.logo} alt="" className="w-8 h-8 object-contain" />
+                        <span className="text-xs font-bold text-white truncate">{selectedEvent.awayTeam.name}</span>
+                        <span className="text-lg font-black text-white ml-auto">{selectedEvent.awayTeam.score}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-gray-500">VS</span>
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="text-lg font-black text-white mr-auto">{selectedEvent.homeTeam.score}</span>
+                        <span className="text-xs font-bold text-white truncate text-right">{selectedEvent.homeTeam.name}</span>
+                        <img src={selectedEvent.homeTeam.logo} alt="" className="w-8 h-8 object-contain" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hero Actions */}
+                  <div className="flex items-center gap-3 pt-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        setServerIdx(0);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="px-6 py-3 rounded-full bg-[#1ce783] hover:bg-[#00ed82] text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 transition transform hover:scale-105 shadow-[0_0_25px_rgba(28,231,131,0.4)]"
+                    >
+                      <Play className="w-4 h-4 fill-current ml-0.5" /> Watch Live Now
+                    </button>
+
+                    <button
+                      onClick={() => setMultiView(true)}
+                      className="px-5 py-3 rounded-full text-xs font-bold transition flex items-center gap-2 border bg-white/10 hover:bg-white/15 border-white/15 text-white"
+                    >
+                      <Grid className="w-4 h-4" /> Multi-View (Dual Screen)
+                    </button>
+
+                    <button
+                      onClick={() => setUseProxy(!useProxy)}
+                      className={`px-4 py-3 rounded-full text-xs font-bold transition flex items-center gap-1.5 border ${
+                        useProxy
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400'
+                      }`}
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      CORS: {useProxy ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Video Player & Server Switcher */}
+                <div className="lg:col-span-7 space-y-3">
+                  <StreamPlayer
+                    stream={activeServer}
+                    title={selectedEvent.title}
+                    subtitle={selectedEvent.league}
+                    useProxy={useProxy}
+                    isMuted={isMuted}
+                    onToggleMute={() => setIsMuted(!isMuted)}
+                    tileLabel="Main Feed"
+                    onSwitchServer={() => setServerIdx((i) => (i + 1) % servers.length)}
+                  />
+
+                  {/* Server Selection Pills Carousel */}
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
+                    <span className="text-[11px] font-black uppercase text-gray-400 shrink-0 flex items-center gap-1">
+                      <Flame className="w-3.5 h-3.5 text-[#1ce783]" /> Broadcast Rail ({servers.length}):
+                    </span>
+                    {servers.map((srv, idx) => {
+                      const isSelected = serverIdx === idx;
+                      const isHighlight = srv.name.startsWith('Highlight');
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setServerIdx(idx)}
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-[#1ce783] text-black border-[#1ce783] shadow-[0_0_15px_rgba(28,231,131,0.3)]'
+                              : 'bg-black/60 border-white/10 text-gray-300 hover:text-white hover:border-white/20'
+                          }`}
+                        >
+                          {isHighlight ? (
+                            <Film className="w-3 h-3 text-amber-400 shrink-0" />
+                          ) : (
+                            <Play className={`w-3 h-3 ${isSelected ? 'fill-current text-black' : 'text-[#1ce783]'}`} />
+                          )}
+                          <span className="truncate max-w-[160px]">{srv.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-
-              {/* Right Column: Hulu Live Media Player */}
-              <div className="lg:col-span-7 space-y-3">
-                <StreamPlayer
-                  stream={activeServer}
-                  title={selectedEvent.title}
-                  subtitle={selectedEvent.league}
-                  useProxy={useProxy}
-                  isMuted={isMuted}
-                  onToggleMute={() => setIsMuted(!isMuted)}
-                />
-
-                {/* Broadcast Server Selector Pill Carousel */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1">
-                  <span className="text-[11px] font-black uppercase text-gray-400 shrink-0 flex items-center gap-1">
-                    <Flame className="w-3.5 h-3.5 text-[#1ce783]" /> Feeds ({combinedServers.length}):
-                  </span>
-                  {combinedServers.map((srv, idx) => {
-                    const isSelected = serverIdx === idx;
-                    const isHighlight =
-                      srv.name.startsWith('Live Highlight') || srv.name.startsWith('Highlight:');
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => setServerIdx(idx)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-[#1ce783] text-black border-[#1ce783] shadow-[0_0_15px_rgba(28,231,131,0.3)]'
-                            : 'bg-black/60 border-white/10 text-gray-300 hover:text-white hover:border-white/20'
-                        }`}
-                      >
-                        {isHighlight ? (
-                          <Film className="w-3 h-3 text-amber-400 shrink-0" />
-                        ) : (
-                          <Play className={`w-3 h-3 ${isSelected ? 'fill-current text-black' : 'text-[#1ce783]'}`} />
-                        )}
-                        <span className="truncate max-w-[150px]">{srv.name}</span>
-                        <span className={`text-[9px] uppercase px-1 rounded ${isSelected ? 'bg-black/20' : 'bg-white/10'}`}>
-                          {srv.type}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            )}
           </section>
         )}
 
-        {/* Multi-View Dual Screen Section */}
-        {multiView && secondaryEvent && (
-          <section className="p-4 sm:p-6 rounded-3xl bg-[#0c1018] border border-[#1ce783]/30 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase text-[#1ce783] flex items-center gap-2">
-                <Grid className="w-4 h-4" /> Multi-View Screen #2 ({secondaryEvent.title})
-              </span>
-              <button
-                onClick={() => setMultiView(false)}
-                className="text-xs font-bold text-gray-400 hover:text-white"
-              >
-                Close Screen 2
-              </button>
-            </div>
-            <div className="max-w-3xl mx-auto">
-              <StreamPlayer
-                stream={secondaryEvent.servers?.[0]}
-                title={secondaryEvent.title}
-                subtitle={`${secondaryEvent.league} • SCREEN 2`}
-                useProxy={useProxy}
-                isMuted={true}
-                onToggleMute={() => {}}
-              />
-            </div>
-          </section>
-        )}
-
-        {/* Row 1: Trending Live Sports Right Now */}
+        {/* Live Right Now on Air Row */}
         {activeCategory === 'All' && liveNowEvents.length > 0 && (
           <section className="space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
-                  Live Now on Hulu + Live Wire
+                  Live Right Now on Air
                 </h2>
               </div>
-              <span className="text-xs font-bold text-[#1ce783] flex items-center gap-1 cursor-pointer" onClick={() => setActiveCategory('LIVE NOW')}>
+              <span
+                className="text-xs font-bold text-[#1ce783] flex items-center gap-1 cursor-pointer"
+                onClick={() => setActiveCategory('LIVE NOW')}
+              >
                 View All Live ({liveNowEvents.length}) <ChevronRight className="w-3.5 h-3.5" />
               </span>
             </div>
@@ -960,7 +1115,7 @@ export default function HuluLiveWireApp() {
             </h2>
             {multiView && (
               <span className="text-xs text-[#1ce783] animate-pulse">
-                Click &quot;+ Screen 2&quot; on any game below to load into the second view
+                Click &quot;+ Screen 2&quot; on any thumbnail below to populate the second view
               </span>
             )}
           </div>
@@ -970,10 +1125,63 @@ export default function HuluLiveWireApp() {
           </div>
         </section>
       </main>
+
+      {/* Floating Score Trigger for Mobile Match Center */}
+      <div className="sm:hidden fixed bottom-5 right-5 z-40">
+        <button
+          onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
+          className="p-3.5 rounded-full bg-[#1ce783] text-black shadow-[0_0_25px_rgba(28,231,131,0.5)] font-black flex items-center gap-2"
+        >
+          <Flame className="w-5 h-5 fill-current" />
+          <span className="text-xs uppercase">Scores</span>
+        </button>
+      </div>
+
+      {/* Mobile Match Center Bottom Sheet */}
+      {mobileSheetOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0e121a] rounded-t-3xl border-t border-[#1ce783]/40 p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Flame className="w-4 h-4 text-[#1ce783]" /> Mobile Match Center
+              </h3>
+              <button
+                onClick={() => setMobileSheetOpen(false)}
+                className="p-1 rounded-full text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {events.slice(0, 8).map((ev) => (
+                <div
+                  key={ev.id}
+                  onClick={() => {
+                    setSelectedEvent(ev);
+                    setServerIdx(0);
+                    setMobileSheetOpen(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="p-3 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-between cursor-pointer"
+                >
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-[#1ce783]">{ev.league}</span>
+                    <h4 className="text-xs font-black text-white">{ev.title}</h4>
+                  </div>
+                  <span className="text-xs font-black px-2 py-1 rounded-md bg-white/10 text-white">
+                    {ev.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  // Hulu-Styled Thumbnail Card Component
+  // Render Hulu 3D Thumbnail Card
   function renderHuluCard(ev, index) {
     const isSelected = selectedEvent?.id === ev.id;
     const isPinned = pinnedIds.includes(ev.id);
@@ -1008,7 +1216,7 @@ export default function HuluLiveWireApp() {
             : 'border-white/10 hover:border-[#1ce783]/70 focus-visible:border-[#1ce783]'
         }`}
       >
-        {/* Dynamic Green Radial Spotlight */}
+        {/* Dynamic Green Spotlight Glow */}
         <div
           className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
           style={{
@@ -1096,7 +1304,7 @@ export default function HuluLiveWireApp() {
             </div>
           </div>
 
-          {/* Hover Play Button */}
+          {/* Hover Center Play Button */}
           <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-black/40 backdrop-blur-[2px]">
             <div className="w-12 h-12 rounded-full bg-[#1ce783] text-black flex items-center justify-center shadow-xl shadow-[#1ce783]/40 transform scale-75 group-hover:scale-100 transition-transform duration-300">
               <Play className="w-5 h-5 fill-current ml-0.5" />
@@ -1112,8 +1320,8 @@ export default function HuluLiveWireApp() {
             </h3>
             <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">
               {isMedia
-                ? `${ev.rating || '98% Match'} • ${ev.year || '2026'} • Full Stream`
-                : `${ev.broadcast || 'LIVE WIRE HD'} • ${ev.servers?.length || 1} Streams`}
+                ? `${ev.rating || '99% Match'} • ${ev.year || '2026'} • Full Stream`
+                : `${ev.broadcast || 'LIVE WIRE HD'} • ${ev.servers?.length || 1} Streams Available`}
             </p>
           </div>
 

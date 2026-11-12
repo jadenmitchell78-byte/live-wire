@@ -4,11 +4,12 @@
 
 :root {
   color-scheme: dark;
-  --hulu-green: #1ce783;
-  --hulu-green-hover: #00ed82;
-  --hulu-dark: #06080b;
-  --hulu-card: #0f131a;
-  --hulu-card-border: rgba(255, 255, 255, 0.08);
+  --hulu-emerald: #1ce783;
+  --hulu-emerald-hover: #00ed82;
+  --broadcast-crimson: #ef4444;
+  --broadcast-crimson-glow: rgba(239, 68, 68, 0.45);
+  --dark-obsidian: #06080b;
+  --dark-card: #0d111a;
 }
 
 body {
@@ -18,7 +19,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom sleek scrollbar */
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -34,11 +35,11 @@ body {
   background: #1ce783;
 }
 
-/* Staggered Entrance Animation */
+/* Staggered Tab / Card Entrance Animation */
 @keyframes cardFadeUp {
   0% {
     opacity: 0;
-    transform: translateY(14px) scale(0.97);
+    transform: translateY(16px) scale(0.97);
   }
   100% {
     opacity: 1;
@@ -50,27 +51,44 @@ body {
   animation: cardFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Hulu Signature Card Physics */
+/* Ken Burns Subtle Zoom for Hero and Backdrop Art */
+@keyframes kenBurns {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-ken-burns {
+  animation: kenBurns 20s ease-in-out infinite alternate;
+}
+
+/* 3D Tilt & Lift Physics on Thumbnail Cards */
 .catalog-card {
   position: relative;
   transition:
-    transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
-    box-shadow 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
+    transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
+    box-shadow 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
     border-color 0.25s ease;
   will-change: transform, box-shadow;
 }
 
 .catalog-card:hover,
 .catalog-card:focus-visible {
-  transform: translateY(-6px) scale(1.025);
+  transform: translateY(-7px) scale(1.028);
   z-index: 20;
-  border-color: rgba(28, 231, 131, 0.7) !important;
+  border-color: rgba(28, 231, 131, 0.75) !important;
   box-shadow:
-    0 16px 36px -10px rgba(0, 0, 0, 0.9),
-    0 0 24px -2px rgba(28, 231, 131, 0.32);
+    0 20px 40px -10px rgba(0, 0, 0, 0.95),
+    0 0 25px -2px rgba(28, 231, 131, 0.35);
 }
 
-/* Diagonal Sheen Sweep on Hover */
+/* Diagonal Glass Sheen Sweep on Hover */
 .catalog-card::after {
   content: '';
   position: absolute;
@@ -78,12 +96,12 @@ body {
   background: linear-gradient(
     115deg,
     transparent 20%,
-    rgba(28, 231, 131, 0.06) 45%,
-    rgba(255, 255, 255, 0.12) 50%,
+    rgba(28, 231, 131, 0.08) 45%,
+    rgba(255, 255, 255, 0.14) 50%,
     transparent 75%
   );
   transform: translateX(-120%);
-  transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition: transform 0.65s cubic-bezier(0.2, 0.9, 0.3, 1);
   pointer-events: none;
 }
 
@@ -91,16 +109,16 @@ body {
   transform: translateX(120%);
 }
 
-/* Hulu Neon Glow Highlights */
-.hulu-glow {
-  box-shadow: 0 0 25px rgba(28, 231, 131, 0.4);
+/* Pulse Beacons */
+.emerald-beacon {
+  box-shadow: 0 0 16px rgba(28, 231, 131, 0.6);
 }
 
-.hulu-glow-subtle {
-  box-shadow: 0 0 15px rgba(28, 231, 131, 0.2);
+.crimson-beacon {
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
 }
 
-/* Hide scrollbar for clean horizontal carousels */
+/* Hide scrollbars cleanly */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
