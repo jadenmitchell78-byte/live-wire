@@ -5,9 +5,9 @@ const nextConfig = {
     unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: '**.espncdn.com' },
-      { protocol: 'https', hostname: '**.wikimedia.org' }
-    ]
-  }
+      { protocol: 'https', hostname: '**.wikimedia.org' },
+    ],
+  },
 };
 
 export default nextConfig;
