@@ -3,8 +3,10 @@ import { getCatalogData } from '../../../lib/catalog';
 
 export const revalidate = 30;
 
-export async function GET() {
-  const catalog = await getCatalogData();
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const rotateParam = searchParams.get('rotate');
+  const catalog = await getCatalogData(rotateParam !== null ? Number(rotateParam) : null);
 
   return NextResponse.json(catalog, {
     headers: {

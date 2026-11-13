@@ -436,6 +436,7 @@ export default function ClientHomePage({ initialCatalog }) {
   const [customUrl, setCustomUrl] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [rotationTick, setRotationTick] = useState(0);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -481,10 +482,13 @@ export default function ClientHomePage({ initialCatalog }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const fetchCatalog = async () => {
+  const fetchCatalog = async (rotateNext = false) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/catalog');
+      const nextSeed = rotateNext ? rotationTick + 1 : rotationTick;
+      if (rotateNext) setRotationTick(nextSeed);
+      const url = rotateNext ? `/api/catalog?rotate=${nextSeed}` : '/api/catalog';
+      const res = await fetch(url);
       const data = await res.json();
       const list = data.events || [];
       if (list.length > 0) {
@@ -658,11 +662,12 @@ export default function ClientHomePage({ initialCatalog }) {
             </button>
 
             <button
-              onClick={fetchCatalog}
-              className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition"
-              title="Refresh Catalog"
+              onClick={() => fetchCatalog(true)}
+              className="px-2.5 py-1.5 rounded bg-white/10 hover:bg-[#E50914] text-white text-[11px] font-bold flex items-center gap-1 transition"
+              title="Rotate New Movies & Shows"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E50914]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Rotate</span>
             </button>
           </div>
         </div>
