@@ -9,7 +9,6 @@ import {
   Film,
   Clapperboard,
   Trophy,
-  Home,
   Search,
   RefreshCw,
   Shield,
@@ -17,61 +16,29 @@ import {
   Grid,
   Volume2,
   VolumeX,
-  PlusCircle,
-  Star,
+  Plus,
+  Check,
   AlertTriangle,
   PictureInPicture2,
   CheckCircle2,
-  Palette,
   ChevronLeft,
   ChevronRight,
-  Menu,
   X,
-  Clock,
+  Flame,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { id: 'Home', label: 'Home', icon: Home },
-  { id: 'LIVE NOW', label: 'Live Now', icon: Radio },
-  { id: 'Sports', label: 'Live Sports', icon: Trophy },
-  { id: 'Channels', label: 'Live TV', icon: Tv },
-  { id: 'Movies', label: 'Movies', icon: Film },
-  { id: 'Shows', label: 'TV Shows', icon: Clapperboard },
-  { id: 'Pinned', label: 'Favorites', icon: Star },
+const NAV_TABS = [
+  { id: 'Home', label: 'Home' },
+  { id: 'LIVE NOW', label: 'Live Now' },
+  { id: 'Sports', label: 'Sports' },
+  { id: 'Channels', label: 'Live TV' },
+  { id: 'Movies', label: 'Movies' },
+  { id: 'Shows', label: 'TV Shows' },
+  { id: 'Pinned', label: 'My List' },
 ];
 
-const THEMES = {
-  estuary: {
-    label: 'Estuary Blue',
-    bg: 'bg-[#080d14]',
-    sidebar: 'bg-[#0b131e]/95',
-    card: 'bg-[#101a28]',
-    accent: 'bg-sky-500 hover:bg-sky-400 border-sky-400',
-    activeNav: 'bg-sky-500/20 text-sky-300 border-l-4 border-sky-400',
-    glow: 'hover:border-sky-400/70 hover:shadow-[0_12px_36px_rgba(56,189,248,0.22)]',
-    ring: 'border-sky-400 ring-2 ring-sky-400/40',
-  },
-  amg: {
-    label: 'AMG Crimson',
-    bg: 'bg-[#09080d]',
-    sidebar: 'bg-[#100b14]/95',
-    card: 'bg-[#16101c]',
-    accent: 'bg-rose-600 hover:bg-rose-500 border-rose-500',
-    activeNav: 'bg-rose-500/20 text-rose-300 border-l-4 border-rose-500',
-    glow: 'hover:border-rose-500/70 hover:shadow-[0_12px_36px_rgba(244,63,94,0.24)]',
-    ring: 'border-rose-500 ring-2 ring-rose-500/40',
-  },
-  pitch: {
-    label: 'Emerald Pitch',
-    bg: 'bg-[#060d0b]',
-    sidebar: 'bg-[#091511]/95',
-    card: 'bg-[#0e1f19]',
-    accent: 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500',
-    activeNav: 'bg-emerald-500/20 text-emerald-300 border-l-4 border-emerald-400',
-    glow: 'hover:border-emerald-400/70 hover:shadow-[0_12px_36px_rgba(52,211,153,0.22)]',
-    ring: 'border-emerald-400 ring-2 ring-emerald-400/40',
-  },
-};
+const HERO_FALLBACK_BG =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1800&q=80';
 
 function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute }) {
   const videoRef = useRef(null);
@@ -189,40 +156,40 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
   };
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden border border-white/15 shadow-2xl group">
+    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/15 shadow-[0_25px_70px_rgba(0,0,0,0.85)] group">
       <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-          <span className="h-2.5 w-2.5 rounded-full bg-sky-400 animate-pulse" />
-          <span className="text-xs font-bold tracking-wider uppercase text-white truncate max-w-[200px] sm:max-w-xs">
+        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10">
+          <span className="h-2 w-2 rounded-full bg-[#E50914] animate-pulse" />
+          <span className="text-xs font-bold tracking-wide uppercase text-white truncate max-w-[200px] sm:max-w-xs">
             {title}
           </span>
           {subtitle && <span className="text-xs text-gray-400 hidden sm:inline">• {subtitle}</span>}
         </div>
-        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[11px] font-mono text-emerald-400">
+        <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[11px] font-mono text-emerald-400">
           <CheckCircle2 className="w-3.5 h-3.5" />
           {resolution}
         </div>
       </div>
 
       {status === 'loading' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80">
-          <RefreshCw className="w-8 h-8 text-sky-400 animate-spin mb-2" />
-          <span className="text-xs text-gray-300 font-medium tracking-wide">Buffering Kodi Stream...</span>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/85">
+          <RefreshCw className="w-9 h-9 text-[#E50914] animate-spin mb-2" />
+          <span className="text-xs text-gray-300 font-medium tracking-wider uppercase">Loading Stream...</span>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 p-6 text-center">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-amber-500 mb-2" />
-          <p className="text-sm font-semibold text-white mb-1">Stream Connection Interrupted</p>
+          <p className="text-sm font-bold text-white mb-1">Stream Interrupted</p>
           <p className="text-xs text-gray-400 max-w-md mb-4">
-            Switch servers below or toggle the CORS Proxy switch for external M3U8 feeds.
+            Try switching servers below or toggle Proxy ON/OFF for external M3U8 feeds.
           </p>
           <button
             onClick={() => setRetrySeed((s) => s + 1)}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-lg flex items-center gap-2 transition"
+            className="px-4 py-2 bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-bold rounded-md flex items-center gap-2 transition"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Reload Stream
+            <RefreshCw className="w-3.5 h-3.5" /> Retry Stream
           </button>
         </div>
       )}
@@ -250,22 +217,22 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
         <div className="absolute bottom-14 right-3 z-20 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={onToggleMute}
-            className="p-2 rounded-lg bg-black/80 hover:bg-sky-500 text-white border border-white/10 transition"
+            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
           <button
             onClick={handlePiP}
-            className="p-2 rounded-lg bg-black/80 hover:bg-sky-500 text-white border border-white/10 transition"
+            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
             title="Picture in Picture"
           >
             <PictureInPicture2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setRetrySeed((s) => s + 1)}
-            className="p-2 rounded-lg bg-black/80 hover:bg-sky-500 text-white border border-white/10 transition"
-            title="Reload Buffer"
+            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
+            title="Reload Stream"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -275,7 +242,7 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
   );
 }
 
-function KodiCard({ ev, isSelected, isPinned, onSelect, onTogglePin, onSelectSecondary, multiView, theme }) {
+function NetflixCard({ ev, isSelected, isPinned, onSelect, onTogglePin, onSelectSecondary, multiView, index = 0 }) {
   return (
     <div
       onClick={() => onSelect(ev)}
@@ -287,109 +254,110 @@ function KodiCard({ ev, isSelected, isPinned, onSelect, onTogglePin, onSelectSec
           onSelect(ev);
         }
       }}
-      className={`group relative cursor-pointer rounded-2xl overflow-hidden ${theme.card} border transition-all duration-300 ease-out transform hover:-translate-y-1.5 hover:scale-[1.03] focus:outline-none ${
-        isSelected ? theme.ring : `border-white/10 ${theme.glow}`
+      style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
+      className={`group relative cursor-pointer rounded-lg overflow-hidden bg-[#181818] border transition-all duration-300 ease-out transform hover:scale-105 hover:-translate-y-1 hover:z-20 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)] focus:outline-none ${
+        isSelected
+          ? 'border-[#E50914] ring-2 ring-[#E50914]/50'
+          : 'border-white/10 hover:border-white/40'
       }`}
     >
       {ev.poster ? (
-        <div className="relative h-36 w-full overflow-hidden bg-black/40">
+        <div className="relative h-40 w-full overflow-hidden bg-[#111]">
           <img
             src={ev.poster}
             alt={ev.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-85 group-hover:opacity-100"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-gray-200 border border-white/10">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-black/30 to-transparent" />
+          <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-black/75 text-gray-200">
               {ev.league}
             </span>
-            <button
-              onClick={(e) => onTogglePin(ev.id, e)}
-              className={`p-1.5 rounded-full bg-black/60 backdrop-blur hover:bg-black/80 transition ${
-                isPinned ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'
-              }`}
-              title="Toggle Favorite"
-            >
-              <Star className="w-3.5 h-3.5 fill-current" />
-            </button>
-          </div>
-          <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
-            <span className="text-sm font-bold text-white truncate">{ev.shortTitle || ev.title}</span>
             {ev.isLive && (
-              <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-red-600 text-white">
+              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-[#E50914] text-white shadow">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                 LIVE
               </span>
             )}
           </div>
+          <div className="absolute bottom-2 left-3 right-3">
+            <p className="text-sm font-bold text-white truncate drop-shadow">{ev.shortTitle || ev.title}</p>
+          </div>
         </div>
       ) : (
-        <div className="p-4 space-y-3">
+        <div className="p-3.5 h-40 flex flex-col justify-between bg-gradient-to-br from-[#202020] to-[#141414]">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 text-gray-300">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white/10 text-gray-200">
               {ev.league}
             </span>
-            <div className="flex items-center gap-1.5">
-              {ev.isLive ? (
-                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                  {ev.status}
-                </span>
-              ) : (
-                <span className="text-[10px] font-medium text-gray-400">{ev.status}</span>
-              )}
-              <button
-                onClick={(e) => onTogglePin(ev.id, e)}
-                className={`p-1 rounded hover:bg-white/10 transition ${
-                  isPinned ? 'text-amber-400' : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                <Star className="w-3.5 h-3.5 fill-current" />
-              </button>
-            </div>
+            {ev.isLive ? (
+              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-[#E50914] text-white">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                {ev.status}
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold text-gray-400">{ev.status}</span>
+            )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 my-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <img src={ev.awayTeam?.logo} alt="" className="w-6 h-6 object-contain shrink-0" />
                 <span className="text-xs font-bold text-white truncate">{ev.awayTeam?.name}</span>
               </div>
-              <span className="text-sm font-black text-gray-200">{ev.awayTeam?.score}</span>
+              <span className="text-sm font-black text-white">{ev.awayTeam?.score}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <img src={ev.homeTeam?.logo} alt="" className="w-6 h-6 object-contain shrink-0" />
                 <span className="text-xs font-bold text-white truncate">{ev.homeTeam?.name}</span>
               </div>
-              <span className="text-sm font-black text-gray-200">{ev.homeTeam?.score}</span>
+              <span className="text-sm font-black text-white">{ev.homeTeam?.score}</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="px-4 py-2.5 border-t border-white/5 bg-black/20 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-gray-300 group-hover:text-white flex items-center gap-1.5 transition">
-          <Play className="w-3 h-3 fill-current" />
-          {isSelected ? 'Playing Now' : 'Play Stream'}
+      {/* Netflix Quick Action Footer */}
+      <div className="px-3.5 py-2.5 bg-[#181818] border-t border-white/5 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-white group-hover:text-[#E50914] transition">
+          <span className="w-6 h-6 rounded-full bg-white text-black group-hover:bg-[#E50914] group-hover:text-white flex items-center justify-center transition">
+            <Play className="w-3 h-3 fill-current ml-0.5" />
+          </span>
+          {isSelected ? 'Playing' : 'Play'}
         </span>
-        {multiView && (
+
+        <div className="flex items-center gap-1.5">
+          {multiView && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectSecondary(ev);
+              }}
+              className="px-2 py-1 rounded bg-white/10 hover:bg-[#E50914] text-[10px] font-bold text-white transition"
+            >
+              #2
+            </button>
+          )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectSecondary(ev);
-            }}
-            className="px-2 py-1 rounded bg-white/10 hover:bg-sky-500 text-[10px] font-bold text-white transition"
+            onClick={(e) => onTogglePin(ev.id, e)}
+            className={`w-7 h-7 rounded-full border flex items-center justify-center transition ${
+              isPinned
+                ? 'border-white bg-white text-black'
+                : 'border-white/30 text-gray-300 hover:border-white hover:text-white'
+            }`}
+            title={isPinned ? 'Remove from My List' : 'Add to My List'}
           >
-            Screen #2
+            {isPinned ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
           </button>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-function KodiShelf({ title, icon: Icon, items, selectedId, pinnedIds, onSelect, onTogglePin, onSelectSecondary, multiView, theme }) {
+function NetflixRow({ title, icon: Icon, items, selectedId, pinnedIds, onSelect, onTogglePin, onSelectSecondary, multiView }) {
   const railRef = useRef(null);
   if (!items || items.length === 0) return null;
 
@@ -398,50 +366,52 @@ function KodiShelf({ title, icon: Icon, items, selectedId, pinnedIds, onSelect, 
   };
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-200 flex items-center gap-2">
-          <Icon className="w-4 h-4 text-sky-400" />
+    <section className="relative group/row space-y-2.5">
+      <div className="flex items-center justify-between px-4 sm:px-8">
+        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 tracking-tight">
+          <Icon className="w-4 h-4 text-[#E50914]" />
           {title}
-          <span className="text-xs font-normal text-gray-500">({items.length})</span>
+          <span className="text-xs font-medium text-gray-500">({items.length})</span>
         </h2>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => scrollBy(-340)}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-gray-300 transition"
-            title="Scroll Left"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => scrollBy(340)}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-gray-300 transition"
-            title="Scroll Right"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
-      <div
-        ref={railRef}
-        className="flex gap-4 overflow-x-auto pb-3 scroll-smooth snap-x"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {items.map((ev) => (
-          <div key={ev.id} className="w-[260px] sm:w-[280px] shrink-0 snap-start">
-            <KodiCard
-              ev={ev}
-              isSelected={selectedId === ev.id}
-              isPinned={pinnedIds.includes(ev.id)}
-              onSelect={onSelect}
-              onTogglePin={onTogglePin}
-              onSelectSecondary={onSelectSecondary}
-              multiView={multiView}
-              theme={theme}
-            />
-          </div>
-        ))}
+      <div className="relative">
+        <button
+          onClick={() => scrollBy(-520)}
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-30 w-10 h-28 rounded-lg bg-black/75 hover:bg-black/95 text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 border border-white/10"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <div
+          ref={railRef}
+          className="flex gap-3.5 overflow-x-auto px-4 sm:px-8 py-3 scroll-smooth snap-x"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {items.map((ev, idx) => (
+            <div key={ev.id} className="w-[240px] sm:w-[270px] shrink-0 snap-start">
+              <NetflixCard
+                ev={ev}
+                index={idx}
+                isSelected={selectedId === ev.id}
+                isPinned={pinnedIds.includes(ev.id)}
+                onSelect={onSelect}
+                onTogglePin={onTogglePin}
+                onSelectSecondary={onSelectSecondary}
+                multiView={multiView}
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => scrollBy(520)}
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-30 w-10 h-28 rounded-lg bg-black/75 hover:bg-black/95 text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 border border-white/10"
+          aria-label="Scroll right"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
       </div>
     </section>
   );
@@ -451,11 +421,12 @@ export default function ClientHomePage({ initialCatalog }) {
   const initialEvents = initialCatalog?.events || [];
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(initialEvents.length === 0);
-  const [activeNav, setActiveNav] = useState('Home');
+  const [activeTab, setActiveTab] = useState('Home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(initialEvents[0] || null);
   const [secondaryEvent, setSecondaryEvent] = useState(initialEvents[1] || initialEvents[0] || null);
-  const [playerOpen, setPlayerOpen] = useState(Boolean(initialEvents[0]));
+  const [playerOpen, setPlayerOpen] = useState(false);
   const [serverIdx, setServerIdx] = useState(0);
   const [useProxy, setUseProxy] = useState(true);
   const [multiView, setMultiView] = useState(false);
@@ -464,53 +435,33 @@ export default function ClientHomePage({ initialCatalog }) {
   const [pinnedIds, setPinnedIds] = useState([]);
   const [customUrl, setCustomUrl] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [themeKey, setThemeKey] = useState('estuary');
-  const [clockText, setClockText] = useState('');
+  const [scrolled, setScrolled] = useState(false);
   const searchInputRef = useRef(null);
-
-  const theme = THEMES[themeKey] || THEMES.estuary;
 
   useEffect(() => {
     try {
       const savedPins = localStorage.getItem('livewire_pins');
       if (savedPins) setPinnedIds(JSON.parse(savedPins));
-      const savedTheme = localStorage.getItem('livewire_theme');
-      if (savedTheme && THEMES[savedTheme]) setThemeKey(savedTheme);
     } catch {}
 
-    const updateClock = () => {
-      setClockText(
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      );
-    };
-    updateClock();
-    const t = setInterval(updateClock, 15000);
-    return () => clearInterval(t);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        setSearchOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
       } else if (e.key === 'Escape') {
         setShowCustomModal(false);
-        setSidebarOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-
-  const cycleTheme = () => {
-    const keys = Object.keys(THEMES);
-    const next = keys[(keys.indexOf(themeKey) + 1) % keys.length];
-    setThemeKey(next);
-    try {
-      localStorage.setItem('livewire_theme', next);
-    } catch {}
-  };
 
   const togglePin = (id, e) => {
     e?.stopPropagation();
@@ -568,26 +519,13 @@ export default function ClientHomePage({ initialCatalog }) {
 
   const sportsCategories = new Set(['NFL', 'NBA', 'College', 'Soccer', 'MMA', 'Sports']);
 
-  const counts = useMemo(
-    () => ({
-      Home: searchedEvents.length,
-      'LIVE NOW': searchedEvents.filter((e) => e.isLive).length,
-      Sports: searchedEvents.filter((e) => sportsCategories.has(e.category)).length,
-      Channels: searchedEvents.filter((e) => e.category === 'Channels').length,
-      Movies: searchedEvents.filter((e) => e.category === 'Movies').length,
-      Shows: searchedEvents.filter((e) => e.category === 'Shows').length,
-      Pinned: searchedEvents.filter((e) => pinnedIds.includes(e.id)).length,
-    }),
-    [searchedEvents, pinnedIds],
-  );
-
   const visibleGridEvents = useMemo(() => {
-    if (activeNav === 'LIVE NOW') return searchedEvents.filter((e) => e.isLive);
-    if (activeNav === 'Sports') return searchedEvents.filter((e) => sportsCategories.has(e.category));
-    if (activeNav === 'Pinned') return searchedEvents.filter((e) => pinnedIds.includes(e.id));
-    if (activeNav === 'Home') return searchedEvents;
-    return searchedEvents.filter((e) => e.category === activeNav);
-  }, [searchedEvents, activeNav, pinnedIds]);
+    if (activeTab === 'LIVE NOW') return searchedEvents.filter((e) => e.isLive);
+    if (activeTab === 'Sports') return searchedEvents.filter((e) => sportsCategories.has(e.category));
+    if (activeTab === 'Pinned') return searchedEvents.filter((e) => pinnedIds.includes(e.id));
+    if (activeTab === 'Home') return searchedEvents;
+    return searchedEvents.filter((e) => e.category === activeTab);
+  }, [searchedEvents, activeTab, pinnedIds]);
 
   const handleLoadCustomStream = (e) => {
     e.preventDefault();
@@ -612,353 +550,363 @@ export default function ClientHomePage({ initialCatalog }) {
     setShowCustomModal(false);
   };
 
+  const heroEvent = selectedEvent || events[0];
   const activeServer = selectedEvent?.servers?.[serverIdx] || selectedEvent?.servers?.[0];
 
   return (
-    <div className={`min-h-screen flex overflow-x-hidden text-gray-100 ${theme.bg}`}>
-      {/* Mobile Sidebar Backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/70 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Left Kodi Estuary Sidebar */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 shrink-0 ${theme.sidebar} backdrop-blur-xl border-r border-white/10 flex flex-col justify-between transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+    <div className="min-h-screen bg-[#141414] text-white overflow-x-hidden pb-16">
+      {/* Netflix Top Navigation Bar */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${
+          scrolled || playerOpen
+            ? 'bg-[#141414]/95 backdrop-blur-md border-b border-white/10'
+            : 'bg-gradient-to-b from-black/90 via-black/50 to-transparent'
         }`}
       >
-        <div>
-          <div className="h-16 px-5 flex items-center justify-between border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-lg shadow-sky-500/25">
-                <Radio className="w-5 h-5 text-white animate-pulse" />
-              </div>
-              <div>
-                <div className="font-black tracking-wider text-base text-white">LIVE WIRE</div>
-                <div className="text-[10px] font-bold tracking-widest uppercase text-sky-400">
-                  Kodi Media UI
-                </div>
-              </div>
-            </div>
+        <div className="px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
             <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white"
+              onClick={() => {
+                setActiveTab('Home');
+                setSearchQuery('');
+              }}
+              className="text-xl sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0"
             >
-              <X className="w-5 h-5" />
+              LIVE WIRE
             </button>
-          </div>
 
-          <nav className="p-3 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = activeNav === item.id;
-              return (
+            <nav className="hidden md:flex items-center gap-4">
+              {NAV_TABS.map((tab) => (
                 <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveNav(item.id);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                    active
-                      ? theme.activeNav
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`text-xs font-semibold transition ${
+                    activeTab === tab.id ? 'text-white font-bold' : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  <span className="flex items-center gap-3">
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
-                    {counts[item.id] ?? 0}
-                  </span>
+                  {tab.label}
                 </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="p-3 border-t border-white/10 space-y-2">
-          <button
-            onClick={() => setShowCustomModal(true)}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 transition"
-          >
-            <PlusCircle className="w-4 h-4 text-sky-400" />
-            Add Custom Stream
-          </button>
-          <button
-            onClick={cycleTheme}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 transition"
-          >
-            <span className="flex items-center gap-2.5">
-              <Palette className="w-4 h-4 text-sky-400" />
-              {theme.label}
-            </span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Kodi Content Canvas */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 h-16 px-4 lg:px-6 bg-black/40 backdrop-blur-xl border-b border-white/10 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1 max-w-xl">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-white/5 border border-white/10 text-gray-200"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search sports, movies, shows, channels... (/)"
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-400 transition"
-              />
-            </div>
+              ))}
+            </nav>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {searchOpen ? (
+              <div className="flex items-center bg-black/80 border border-white/40 rounded px-2.5 py-1 transition-all">
+                <Search className="w-4 h-4 text-gray-300 mr-2" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Titles, teams, leagues..."
+                  className="bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none w-36 sm:w-52"
+                />
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchOpen(false);
+                  }}
+                  className="text-gray-400 hover:text-white ml-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchOpen(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 50);
+                }}
+                className="p-2 text-gray-200 hover:text-white transition"
+                title="Search (/)"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               onClick={() => setUseProxy((p) => !p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
+              className={`px-2.5 py-1.5 rounded text-[11px] font-bold border flex items-center gap-1 transition ${
                 useProxy
-                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                  : 'bg-white/5 border-white/10 text-gray-400'
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  : 'bg-white/10 border-white/15 text-gray-300'
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Proxy:</span> {useProxy ? 'ON' : 'OFF'}
+              <span className="hidden sm:inline">Proxy</span> {useProxy ? 'ON' : 'OFF'}
             </button>
+
             <button
               onClick={() => setMultiView((m) => !m)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
+              className={`px-2.5 py-1.5 rounded text-[11px] font-bold border flex items-center gap-1 transition ${
                 multiView
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  : 'bg-white/5 border-white/10 text-gray-400'
+                  ? 'bg-[#E50914] border-[#E50914] text-white'
+                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
               }`}
             >
               <Grid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Multi-View</span>
+              <span className="hidden sm:inline">Multi</span>
             </button>
+
+            <button
+              onClick={() => setShowCustomModal(true)}
+              className="px-2.5 py-1.5 rounded text-[11px] font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center gap-1 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Add</span>
+            </button>
+
             <button
               onClick={fetchCatalog}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 transition"
-              title="Sync Catalog"
+              className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition"
+              title="Refresh Catalog"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E50914]' : ''}`} />
             </button>
-            {clockText && (
-              <div className="hidden md:flex items-center gap-1.5 pl-2 text-xs font-mono text-gray-300">
-                <Clock className="w-3.5 h-3.5 text-sky-400" />
-                {clockText}
-              </div>
+          </div>
+        </div>
+
+        {/* Mobile Category Strip */}
+        <div className="flex md:hidden items-center gap-3 overflow-x-auto px-4 pb-2.5" style={{ scrollbarWidth: 'none' }}>
+          {NAV_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`text-xs whitespace-nowrap px-2.5 py-1 rounded-full transition ${
+                activeTab === tab.id ? 'bg-[#E50914] text-white font-bold' : 'bg-white/10 text-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Active Player Theater OR Netflix Hero Billboard */}
+      {playerOpen && selectedEvent ? (
+        <section className={`pt-24 sm:pt-20 px-4 sm:px-8 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-7xl'} space-y-3`}>
+          <div className={`grid gap-4 ${multiView ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+            <StreamPlayer
+              stream={activeServer}
+              title={selectedEvent.shortTitle || selectedEvent.title}
+              subtitle={activeServer?.name}
+              useProxy={useProxy}
+              isMuted={isMuted}
+              onToggleMute={() => setIsMuted((m) => !m)}
+            />
+            {multiView && secondaryEvent && (
+              <StreamPlayer
+                stream={secondaryEvent.servers?.[0]}
+                title={secondaryEvent.shortTitle || secondaryEvent.title}
+                subtitle={secondaryEvent.servers?.[0]?.name}
+                useProxy={useProxy}
+                isMuted={true}
+                onToggleMute={() => {}}
+              />
             )}
           </div>
-        </header>
 
-        <main className={`${theaterMode ? 'max-w-full' : 'max-w-7xl'} w-full mx-auto px-4 lg:px-6 py-6 space-y-8`}>
-          {/* Docked Kodi Player Section */}
-          {playerOpen && selectedEvent && (
-            <section className="space-y-3 animate-fadeIn">
-              <div className={`grid gap-4 ${multiView ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-                <StreamPlayer
-                  stream={activeServer}
-                  title={selectedEvent.shortTitle || selectedEvent.title}
-                  subtitle={activeServer?.name}
-                  useProxy={useProxy}
-                  isMuted={isMuted}
-                  onToggleMute={() => setIsMuted((m) => !m)}
-                />
-                {multiView && secondaryEvent && (
-                  <StreamPlayer
-                    stream={secondaryEvent.servers?.[0]}
-                    title={secondaryEvent.shortTitle || secondaryEvent.title}
-                    subtitle={secondaryEvent.servers?.[0]?.name}
-                    useProxy={useProxy}
-                    isMuted={true}
-                    onToggleMute={() => {}}
-                  />
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedEvent.servers?.map((srv, idx) => (
-                    <button
-                      key={`${srv.name}-${idx}`}
-                      onClick={() => setServerIdx(idx)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                        serverIdx === idx
-                          ? `${theme.accent} text-white shadow-lg`
-                          : 'bg-black/30 border-white/10 text-gray-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {srv.name}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setTheaterMode((t) => !t)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
-                      theaterMode
-                        ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
-                        : 'bg-black/30 border-white/10 text-gray-300'
-                    }`}
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    Theater
-                  </button>
-                  <button
-                    onClick={() => setPlayerOpen(false)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold border border-white/10 bg-black/30 text-gray-400 hover:text-white transition"
-                  >
-                    Hide Player
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Home Shelves OR Category Grid */}
-          {activeNav === 'Home' && !searchQuery.trim() ? (
-            <div className="space-y-8">
-              <KodiShelf
-                title="Live Now"
-                icon={Radio}
-                items={searchedEvents.filter((e) => e.isLive)}
-                selectedId={selectedEvent?.id}
-                pinnedIds={pinnedIds}
-                onSelect={handleSelectEvent}
-                onTogglePin={togglePin}
-                onSelectSecondary={setSecondaryEvent}
-                multiView={multiView}
-                theme={theme}
-              />
-              <KodiShelf
-                title="24/7 Live Channels"
-                icon={Tv}
-                items={searchedEvents.filter((e) => e.category === 'Channels')}
-                selectedId={selectedEvent?.id}
-                pinnedIds={pinnedIds}
-                onSelect={handleSelectEvent}
-                onTogglePin={togglePin}
-                onSelectSecondary={setSecondaryEvent}
-                multiView={multiView}
-                theme={theme}
-              />
-              <KodiShelf
-                title="Movies Catalog"
-                icon={Film}
-                items={searchedEvents.filter((e) => e.category === 'Movies')}
-                selectedId={selectedEvent?.id}
-                pinnedIds={pinnedIds}
-                onSelect={handleSelectEvent}
-                onTogglePin={togglePin}
-                onSelectSecondary={setSecondaryEvent}
-                multiView={multiView}
-                theme={theme}
-              />
-              <KodiShelf
-                title="TV Shows & News"
-                icon={Clapperboard}
-                items={searchedEvents.filter((e) => e.category === 'Shows')}
-                selectedId={selectedEvent?.id}
-                pinnedIds={pinnedIds}
-                onSelect={handleSelectEvent}
-                onTogglePin={togglePin}
-                onSelectSecondary={setSecondaryEvent}
-                multiView={multiView}
-                theme={theme}
-              />
-              <KodiShelf
-                title="Sports Scoreboard"
-                icon={Trophy}
-                items={searchedEvents.filter((e) => sportsCategories.has(e.category))}
-                selectedId={selectedEvent?.id}
-                pinnedIds={pinnedIds}
-                onSelect={handleSelectEvent}
-                onTogglePin={togglePin}
-                onSelectSecondary={setSecondaryEvent}
-                multiView={multiView}
-                theme={theme}
-              />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#181818] border border-white/10 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedEvent.servers?.map((srv, idx) => (
+                <button
+                  key={`${srv.name}-${idx}`}
+                  onClick={() => setServerIdx(idx)}
+                  className={`px-3 py-1.5 rounded text-xs font-bold transition ${
+                    serverIdx === idx
+                      ? 'bg-[#E50914] text-white'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  {srv.name}
+                </button>
+              ))}
             </div>
-          ) : (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-200 flex items-center gap-2">
-                  <Tv className="w-4 h-4 text-sky-400" />
-                  {searchQuery.trim() ? `Search: "${searchQuery}"` : activeNav} ({visibleGridEvents.length})
-                </h2>
-                {!playerOpen && selectedEvent && (
-                  <button
-                    onClick={() => setPlayerOpen(true)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold text-white border ${theme.accent} transition`}
-                  >
-                    Show Player
-                  </button>
-                )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTheaterMode((t) => !t)}
+                className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 transition"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                Theater
+              </button>
+              <button
+                onClick={() => setPlayerOpen(false)}
+                className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 flex items-center gap-1 transition"
+              >
+                <X className="w-3.5 h-3.5" /> Close Player
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        heroEvent && (
+          <section className="relative h-[58vh] min-h-[420px] max-h-[600px] w-full flex items-end overflow-hidden">
+            <img
+              src={heroEvent.poster || HERO_FALLBACK_BG}
+              alt={heroEvent.title}
+              className="absolute inset-0 w-full h-full object-cover scale-105 opacity-60 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/75 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/60" />
+
+            <div className="relative z-10 max-w-3xl px-4 sm:px-8 pb-12 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-[#E50914] text-[11px] font-black tracking-wider uppercase text-white">
+                  {heroEvent.isLive ? 'LIVE NOW' : 'FEATURED'}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-300">
+                  {heroEvent.league} • {events.length} Streams Ready
+                </span>
               </div>
 
-              {visibleGridEvents.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center text-sm text-gray-400">
-                  No matching streams found in this catalog.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {visibleGridEvents.map((ev) => (
-                    <KodiCard
-                      key={ev.id}
-                      ev={ev}
-                      isSelected={selectedEvent?.id === ev.id}
-                      isPinned={pinnedIds.includes(ev.id)}
-                      onSelect={handleSelectEvent}
-                      onTogglePin={togglePin}
-                      onSelectSecondary={setSecondaryEvent}
-                      multiView={multiView}
-                      theme={theme}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-        </main>
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-lg">
+                {heroEvent.title}
+              </h1>
+
+              <p className="text-sm text-gray-300 max-w-xl">
+                {heroEvent.status} — Watch multi-source live sports, 24/7 channels, movies, and series with zero-lag HLS switching.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  onClick={() => handleSelectEvent(heroEvent)}
+                  className="px-6 py-2.5 rounded-md bg-white hover:bg-white/90 text-black font-extrabold text-sm flex items-center gap-2 transition transform hover:scale-105"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  Play Now
+                </button>
+                <button
+                  onClick={() => togglePin(heroEvent.id)}
+                  className="px-5 py-2.5 rounded-md bg-gray-500/40 hover:bg-gray-500/60 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
+                >
+                  {pinnedIds.includes(heroEvent.id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  My List
+                </button>
+              </div>
+            </div>
+          </section>
+        )
+      )}
+
+      {/* Netflix Catalog Rows OR Filtered Grid */}
+      <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
+        {activeTab === 'Home' && !searchQuery.trim() ? (
+          <>
+            <NetflixRow
+              title="Trending Live Now"
+              icon={Flame}
+              items={searchedEvents.filter((e) => e.isLive)}
+              selectedId={selectedEvent?.id}
+              pinnedIds={pinnedIds}
+              onSelect={handleSelectEvent}
+              onTogglePin={togglePin}
+              onSelectSecondary={setSecondaryEvent}
+              multiView={multiView}
+            />
+            <NetflixRow
+              title="24/7 Live Channels"
+              icon={Tv}
+              items={searchedEvents.filter((e) => e.category === 'Channels')}
+              selectedId={selectedEvent?.id}
+              pinnedIds={pinnedIds}
+              onSelect={handleSelectEvent}
+              onTogglePin={togglePin}
+              onSelectSecondary={setSecondaryEvent}
+              multiView={multiView}
+            />
+            <NetflixRow
+              title="Popular Movies"
+              icon={Film}
+              items={searchedEvents.filter((e) => e.category === 'Movies')}
+              selectedId={selectedEvent?.id}
+              pinnedIds={pinnedIds}
+              onSelect={handleSelectEvent}
+              onTogglePin={togglePin}
+              onSelectSecondary={setSecondaryEvent}
+              multiView={multiView}
+            />
+            <NetflixRow
+              title="TV Shows & Live News"
+              icon={Clapperboard}
+              items={searchedEvents.filter((e) => e.category === 'Shows')}
+              selectedId={selectedEvent?.id}
+              pinnedIds={pinnedIds}
+              onSelect={handleSelectEvent}
+              onTogglePin={togglePin}
+              onSelectSecondary={setSecondaryEvent}
+              multiView={multiView}
+            />
+            <NetflixRow
+              title="All Sports & Matchups"
+              icon={Trophy}
+              items={searchedEvents.filter((e) => sportsCategories.has(e.category))}
+              selectedId={selectedEvent?.id}
+              pinnedIds={pinnedIds}
+              onSelect={handleSelectEvent}
+              onTogglePin={togglePin}
+              onSelectSecondary={setSecondaryEvent}
+              multiView={multiView}
+            />
+          </>
+        ) : (
+          <section className="px-4 sm:px-8 pt-6 space-y-4">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Radio className="w-4 h-4 text-[#E50914]" />
+              {searchQuery.trim() ? `Results for "${searchQuery}"` : activeTab} ({visibleGridEvents.length})
+            </h2>
+
+            {visibleGridEvents.length === 0 ? (
+              <div className="rounded-xl bg-[#181818] border border-white/10 p-10 text-center text-sm text-gray-400">
+                No streams matched your filter.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {visibleGridEvents.map((ev, idx) => (
+                  <NetflixCard
+                    key={ev.id}
+                    ev={ev}
+                    index={idx}
+                    isSelected={selectedEvent?.id === ev.id}
+                    isPinned={pinnedIds.includes(ev.id)}
+                    onSelect={handleSelectEvent}
+                    onTogglePin={togglePin}
+                    onSelectSecondary={setSecondaryEvent}
+                    multiView={multiView}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       {showCustomModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleLoadCustomStream}
-            className="w-full max-w-md rounded-2xl bg-[#101a28] border border-white/15 p-5 space-y-4 shadow-2xl"
+            className="w-full max-w-md rounded-xl bg-[#181818] border border-white/15 p-6 space-y-4 shadow-2xl"
           >
-            <h3 className="text-sm font-bold text-white">Add Custom Stream (M3U8 / MP4 / Embed)</h3>
+            <h3 className="text-base font-bold text-white">Add Custom Stream (M3U8 / MP4 / Embed)</h3>
             <input
               type="url"
               required
               value={customUrl}
               onChange={(e) => setCustomUrl(e.target.value)}
               placeholder="https://example.com/master.m3u8"
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="w-full bg-black/60 border border-white/20 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-[#E50914]"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowCustomModal(false)}
-                className="px-3 py-1.5 rounded-lg bg-white/5 text-xs text-gray-300"
+                className="px-3.5 py-2 rounded-md bg-white/10 text-xs font-semibold text-gray-300"
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-1.5 rounded-lg bg-sky-500 text-xs font-bold text-white">
-                Load Stream
+              <button type="submit" className="px-4 py-2 rounded-md bg-[#E50914] text-xs font-bold text-white">
+                Play Stream
               </button>
             </div>
           </form>
