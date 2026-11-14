@@ -278,6 +278,11 @@ function NetflixCard({ ev, isSelected, isPinned, onSelect, onTogglePin, onSelect
           <img
             src={ev.poster}
             alt={ev.title}
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = HERO_FALLBACK_BG;
+            }}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-black/30 to-transparent" />
@@ -449,6 +454,10 @@ export default function ClientHomePage({ initialCatalog }) {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [rotationTick, setRotationTick] = useState(0);
+  const [remoteResults, setRemoteResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [activeSeason, setActiveSeason] = useState(1);
+  const [activeEpisode, setActiveEpisode] = useState(1);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -490,9 +499,41 @@ export default function ClientHomePage({ initialCatalog }) {
   const handleSelectEvent = (ev) => {
     setSelectedEvent(ev);
     setServerIdx(0);
+    setActiveSeason(1);
+    setActiveEpisode(1);
     setPlayerOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setRemoteResults([]);
+      setSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!cancelled) {
+          setRemoteResults(Array.isArray(data.results) ? data.results : []);
+        }
+      } catch {
+        if (!cancelled) setRemoteResults([]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
 
   const fetchCatalog = async (rotateNext = false) => {
     setLoading(true);
@@ -526,7 +567,7 @@ export default function ClientHomePage({ initialCatalog }) {
   const searchedEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return events;
-    return events.filter(
+    const localMatches = events.filter(
       (ev) =>
         ev.title?.toLowerCase().includes(q) ||
         ev.league?.toLowerCase().includes(q) ||
@@ -534,17 +575,27 @@ export default function ClientHomePage({ initialCatalog }) {
         ev.homeTeam?.name?.toLowerCase().includes(q) ||
         ev.awayTeam?.name?.toLowerCase().includes(q),
     );
-  }, [events, searchQuery]);
+    const seen = new Set(localMatches.map((e) => e.id));
+    const merged = [...localMatches];
+    for (const item of remoteResults) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id);
+        merged.push(item);
+      }
+    }
+    return merged;
+  }, [events, remoteResults, searchQuery]);
 
   const sportsCategories = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Sports']);
 
   const visibleGridEvents = useMemo(() => {
+    if (searchQuery.trim().length >= 2) return searchedEvents;
     if (activeTab === 'LIVE NOW') return searchedEvents.filter((e) => e.isLive);
     if (activeTab === 'Sports') return searchedEvents.filter((e) => sportsCategories.has(e.category));
     if (activeTab === 'Pinned') return searchedEvents.filter((e) => pinnedIds.includes(e.id));
     if (activeTab === 'Home') return searchedEvents;
     return searchedEvents.filter((e) => e.category === activeTab);
-  }, [searchedEvents, activeTab, pinnedIds]);
+  }, [searchedEvents, activeTab, pinnedIds, searchQuery]);
 
   const handleLoadCustomStream = (e) => {
     e.preventDefault();
@@ -570,7 +621,56 @@ export default function ClientHomePage({ initialCatalog }) {
   };
 
   const heroEvent = selectedEvent || events[0];
-  const activeServer = selectedEvent?.servers?.[serverIdx] || selectedEvent?.servers?.[0];
+
+  const resolvedServers = useMemo(() => {
+    if (!selectedEvent) return [];
+    if (selectedEvent.mediaType === 'anime' && selectedEvent.malId) {
+      return [
+        {
+          name: `VidSrc.cc Sub (Ep ${activeEpisode})`,
+          type: 'embed',
+          url: `https://vidsrc.cc/v2/embed/anime/mal-${selectedEvent.malId}/${activeEpisode}/sub`,
+        },
+        {
+          name: `VidSrc.cc Dub (Ep ${activeEpisode})`,
+          type: 'embed',
+          url: `https://vidsrc.cc/v2/embed/anime/mal-${selectedEvent.malId}/${activeEpisode}/dub`,
+        },
+        {
+          name: `VidSrc.icu (Ep ${activeEpisode})`,
+          type: 'embed',
+          url: `https://vidsrc.icu/embed/anime/${selectedEvent.malId}/${activeEpisode}/0`,
+        },
+        {
+          name: `Embed.su (Ep ${activeEpisode})`,
+          type: 'embed',
+          url: `https://embed.su/embed/anime/${selectedEvent.malId}/${activeEpisode}`,
+        },
+      ];
+    }
+    if (selectedEvent.mediaType === 'tv' && selectedEvent.imdbId) {
+      return [
+        {
+          name: `VidSrc.cc (S${activeSeason} E${activeEpisode})`,
+          type: 'embed',
+          url: `https://vidsrc.cc/v2/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+        },
+        {
+          name: `VidSrc.to (S${activeSeason} E${activeEpisode})`,
+          type: 'embed',
+          url: `https://vidsrc.to/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+        },
+        {
+          name: `Embed.su (S${activeSeason} E${activeEpisode})`,
+          type: 'embed',
+          url: `https://embed.su/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+        },
+      ];
+    }
+    return selectedEvent.servers || [];
+  }, [selectedEvent, activeSeason, activeEpisode]);
+
+  const activeServer = resolvedServers[serverIdx] || resolvedServers[0];
 
   return (
     <div className="min-h-screen bg-[#141414] text-white overflow-x-hidden pb-16">
@@ -729,7 +829,7 @@ export default function ClientHomePage({ initialCatalog }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#181818] border border-white/10 p-3">
             <div className="flex flex-wrap items-center gap-2">
-              {selectedEvent.servers?.map((srv, idx) => (
+              {resolvedServers.map((srv, idx) => (
                 <button
                   key={`${srv.name}-${idx}`}
                   onClick={() => setServerIdx(idx)}
@@ -742,6 +842,35 @@ export default function ClientHomePage({ initialCatalog }) {
                   {srv.name}
                 </button>
               ))}
+
+              {(selectedEvent.mediaType === 'anime' || selectedEvent.mediaType === 'tv') && (
+                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-white/15">
+                  {selectedEvent.mediaType === 'tv' && (
+                    <label className="flex items-center gap-1 text-[11px] text-gray-300 font-semibold">
+                      S
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={activeSeason}
+                        onChange={(e) => setActiveSeason(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-11 bg-black/60 border border-white/20 rounded px-1.5 py-1 text-xs text-white text-center"
+                      />
+                    </label>
+                  )}
+                  <label className="flex items-center gap-1 text-[11px] text-gray-300 font-semibold">
+                    Ep
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedEvent.totalEpisodes || 200}
+                      value={activeEpisode}
+                      onChange={(e) => setActiveEpisode(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-12 bg-black/60 border border-white/20 rounded px-1.5 py-1 text-xs text-white text-center"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {activeServer?.url && (
@@ -922,11 +1051,16 @@ export default function ClientHomePage({ initialCatalog }) {
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Radio className="w-4 h-4 text-[#E50914]" />
               {searchQuery.trim() ? `Results for "${searchQuery}"` : activeTab} ({visibleGridEvents.length})
+              {searching && (
+                <span className="text-xs font-medium text-gray-400 animate-pulse ml-2">
+                  Searching TV, Anime & Archive...
+                </span>
+              )}
             </h2>
 
             {visibleGridEvents.length === 0 ? (
               <div className="rounded-xl bg-[#181818] border border-white/10 p-10 text-center text-sm text-gray-400">
-                No streams matched your filter.
+                {searching ? 'Searching across Anime, TV Shows & Archive...' : 'No streams matched your filter.'}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
