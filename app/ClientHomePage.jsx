@@ -624,46 +624,62 @@ export default function ClientHomePage({ initialCatalog }) {
 
   const resolvedServers = useMemo(() => {
     if (!selectedEvent) return [];
-    if (selectedEvent.mediaType === 'anime' && selectedEvent.malId) {
-      return [
-        {
-          name: `VidSrc.cc Sub (Ep ${activeEpisode})`,
+    if (selectedEvent.mediaType === 'anime' && (selectedEvent.aniId || selectedEvent.malId)) {
+      const list = [];
+      if (selectedEvent.aniId) {
+        list.push(
+          {
+            name: `AutoEmbed (Ep ${activeEpisode})`,
+            type: 'embed',
+            url: `https://player.autoembed.cc/embed/anime/${selectedEvent.aniId}/${activeEpisode}`,
+          },
+          {
+            name: `VidSrc.cc Sub (Ep ${activeEpisode})`,
+            type: 'embed',
+            url: `https://vidsrc.cc/v2/embed/anime/ani-${selectedEvent.aniId}/${activeEpisode}/sub`,
+          },
+          {
+            name: `VidSrc.cc Dub (Ep ${activeEpisode})`,
+            type: 'embed',
+            url: `https://vidsrc.cc/v2/embed/anime/ani-${selectedEvent.aniId}/${activeEpisode}/dub`,
+          },
+          {
+            name: `VidSrc.icu (Ep ${activeEpisode})`,
+            type: 'embed',
+            url: `https://vidsrc.icu/embed/anime/${selectedEvent.aniId}/${activeEpisode}/0`,
+          },
+        );
+      }
+      if (selectedEvent.malId) {
+        list.push({
+          name: `VidSrc MAL (Ep ${activeEpisode})`,
           type: 'embed',
           url: `https://vidsrc.cc/v2/embed/anime/mal-${selectedEvent.malId}/${activeEpisode}/sub`,
-        },
-        {
-          name: `VidSrc.cc Dub (Ep ${activeEpisode})`,
-          type: 'embed',
-          url: `https://vidsrc.cc/v2/embed/anime/mal-${selectedEvent.malId}/${activeEpisode}/dub`,
-        },
-        {
-          name: `VidSrc.icu (Ep ${activeEpisode})`,
-          type: 'embed',
-          url: `https://vidsrc.icu/embed/anime/${selectedEvent.malId}/${activeEpisode}/0`,
-        },
-        {
-          name: `Embed.su (Ep ${activeEpisode})`,
-          type: 'embed',
-          url: `https://embed.su/embed/anime/${selectedEvent.malId}/${activeEpisode}`,
-        },
-      ];
+        });
+      }
+      return list;
     }
     if (selectedEvent.mediaType === 'tv' && selectedEvent.imdbId) {
       return [
+        {
+          name: `AutoEmbed (S${activeSeason} E${activeEpisode})`,
+          type: 'embed',
+          url: `https://player.autoembed.cc/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+        },
         {
           name: `VidSrc.cc (S${activeSeason} E${activeEpisode})`,
           type: 'embed',
           url: `https://vidsrc.cc/v2/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
         },
         {
-          name: `VidSrc.to (S${activeSeason} E${activeEpisode})`,
+          name: `VidSrc.xyz (S${activeSeason} E${activeEpisode})`,
           type: 'embed',
-          url: `https://vidsrc.to/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+          url: `https://vidsrc.xyz/embed/tv/${selectedEvent.imdbId}/${activeSeason}-${activeEpisode}`,
         },
         {
-          name: `Embed.su (S${activeSeason} E${activeEpisode})`,
+          name: `2Embed (S${activeSeason} E${activeEpisode})`,
           type: 'embed',
-          url: `https://embed.su/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
+          url: `https://www.2embed.cc/embedtv/${selectedEvent.imdbId}&s=${activeSeason}&e=${activeEpisode}`,
         },
       ];
     }
@@ -672,136 +688,164 @@ export default function ClientHomePage({ initialCatalog }) {
 
   const activeServer = resolvedServers[serverIdx] || resolvedServers[0];
 
+  const menuItems = useMemo(
+    () => [
+      { id: 'Home', label: 'All Catalogs', icon: Grid, count: events.length },
+      { id: 'LIVE NOW', label: 'Live Now', icon: Flame, count: events.filter((e) => e.isLive).length },
+      { id: 'Channels', label: '24/7 Live TV', icon: Tv, count: events.filter((e) => e.category === 'Channels').length },
+      { id: 'Shows', label: 'Shows & Anime', icon: Clapperboard, count: events.filter((e) => e.category === 'Shows').length },
+      { id: 'Movies', label: 'Movies', icon: Film, count: events.filter((e) => e.category === 'Movies').length },
+      { id: 'Sports', label: 'All Sports', icon: Trophy, count: events.filter((e) => sportsCategories.has(e.category)).length },
+      { id: 'NFL', label: 'NFL', icon: Radio, count: events.filter((e) => e.category === 'NFL').length },
+      { id: 'NBA', label: 'NBA', icon: Radio, count: events.filter((e) => e.category === 'NBA').length },
+      { id: 'NHL', label: 'NHL', icon: Radio, count: events.filter((e) => e.category === 'NHL').length },
+      { id: 'MLB', label: 'MLB', icon: Radio, count: events.filter((e) => e.category === 'MLB').length },
+      { id: 'College', label: 'College', icon: Radio, count: events.filter((e) => e.category === 'College').length },
+      { id: 'Soccer', label: 'Soccer', icon: Radio, count: events.filter((e) => e.category === 'Soccer').length },
+      { id: 'MMA', label: 'UFC / MMA', icon: Radio, count: events.filter((e) => e.category === 'MMA').length },
+      { id: 'Pinned', label: 'My List', icon: Check, count: events.filter((e) => pinnedIds.includes(e.id)).length },
+    ],
+    [events, pinnedIds],
+  );
+
   return (
-    <div className="min-h-screen bg-[#141414] text-white overflow-x-hidden pb-16">
-      {/* Netflix Top Navigation Bar */}
+    <div className="min-h-screen bg-[#0c0c0e] text-white overflow-x-hidden pb-24 lg:pb-14">
+      {/* Top Cinema Control Bar */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${
           scrolled || playerOpen
-            ? 'bg-[#141414]/95 backdrop-blur-md border-b border-white/10'
-            : 'bg-gradient-to-b from-black/90 via-black/50 to-transparent'
+            ? 'bg-[#0c0c0e]/95 backdrop-blur-xl border-b border-white/10'
+            : 'bg-gradient-to-b from-black/95 via-black/60 to-transparent'
         }`}
       >
-        <div className="px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => {
-                setActiveTab('Home');
-                setSearchQuery('');
-              }}
-              className="text-xl sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0"
-            >
-              LIVE WIRE
-            </button>
+        <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <button
+            onClick={() => {
+              setActiveTab('Home');
+              setSearchQuery('');
+            }}
+            aria-label="Live Wire Home"
+            className="text-xl sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E50914] rounded px-1"
+          >
+            LIVE WIRE
+          </button>
 
-            <nav className="hidden md:flex items-center gap-4">
-              {NAV_TABS.map((tab) => (
+          <div className="flex-1 max-w-md mx-2">
+            <div className="flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-black/80 focus-within:border-[#E50914] border border-white/15 rounded-full px-3.5 h-10 transition">
+              <Search className="w-4 h-4 text-gray-300 mr-2 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search anime, TV shows, movies, and sports"
+                placeholder="Search anime, shows, teams... (/)"
+                className="bg-transparent text-xs sm:text-sm text-white placeholder-gray-400 focus:outline-none w-full"
+              />
+              {searchQuery && (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`text-xs font-semibold transition ${
-                    activeTab === tab.id ? 'text-white font-bold' : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {searchOpen ? (
-              <div className="flex items-center bg-black/80 border border-white/40 rounded px-2.5 py-1 transition-all">
-                <Search className="w-4 h-4 text-gray-300 mr-2" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Titles, teams, leagues..."
-                  className="bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none w-36 sm:w-52"
-                />
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchOpen(false);
-                  }}
-                  className="text-gray-400 hover:text-white ml-1"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  className="text-gray-400 hover:text-white ml-1 p-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setSearchOpen(true);
-                  setTimeout(() => searchInputRef.current?.focus(), 50);
-                }}
-                className="p-2 text-gray-200 hover:text-white transition"
-                title="Search (/)"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            )}
+              )}
+            </div>
+          </div>
 
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setUseProxy((p) => !p)}
-              className={`px-2.5 py-1.5 rounded text-[11px] font-bold border flex items-center gap-1 transition ${
+              aria-label="Toggle HLS Proxy"
+              className={`h-10 px-3 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition ${
                 useProxy
                   ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                  : 'bg-white/10 border-white/15 text-gray-300'
+                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Proxy</span> {useProxy ? 'ON' : 'OFF'}
+              <span className="hidden md:inline">Proxy</span> {useProxy ? 'ON' : 'OFF'}
             </button>
 
             <button
               onClick={() => setMultiView((m) => !m)}
-              className={`px-2.5 py-1.5 rounded text-[11px] font-bold border flex items-center gap-1 transition ${
+              aria-label="Toggle Multi-View"
+              className={`hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
                 multiView
                   ? 'bg-[#E50914] border-[#E50914] text-white'
                   : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
               }`}
             >
               <Grid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Multi</span>
+              <span className="hidden md:inline">Multi</span>
             </button>
 
             <button
               onClick={() => setShowCustomModal(true)}
-              className="px-2.5 py-1.5 rounded text-[11px] font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center gap-1 transition"
+              aria-label="Add Custom Stream"
+              className="h-10 px-3 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center gap-1.5 transition"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add</span>
+              <Plus className="w-4 h-4" />
+              <span className="hidden md:inline">Add</span>
             </button>
 
             <button
               onClick={() => fetchCatalog(true)}
-              className="px-2.5 py-1.5 rounded bg-white/10 hover:bg-[#E50914] text-white text-[11px] font-bold flex items-center gap-1 transition"
+              aria-label="Rotate Catalog"
+              className="h-10 px-3 rounded-lg bg-white/10 hover:bg-[#E50914] text-white text-xs font-bold flex items-center gap-1.5 transition"
               title="Rotate New Movies & Shows"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Rotate</span>
+              <span className="hidden md:inline">Rotate</span>
             </button>
           </div>
         </div>
-
-        {/* Mobile Category Strip */}
-        <div className="flex md:hidden items-center gap-3 overflow-x-auto px-4 pb-2.5" style={{ scrollbarWidth: 'none' }}>
-          {NAV_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`text-xs whitespace-nowrap px-2.5 py-1 rounded-full transition ${
-                activeTab === tab.id ? 'bg-[#E50914] text-white font-bold' : 'bg-white/10 text-gray-300'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
       </header>
+
+      {/* Desktop Left Sidebar Rail */}
+      <aside
+        aria-label="Browse Categories"
+        className="hidden lg:flex flex-col fixed left-0 top-16 bottom-0 w-60 z-30 bg-[#0c0c0e]/95 backdrop-blur-xl border-r border-white/10 px-3 py-4 overflow-y-auto"
+      >
+        <p className="px-3 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          Browse Menu
+        </p>
+        <nav className="space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const active = activeTab === item.id && !searchQuery.trim();
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setSearchQuery('');
+                }}
+                className={`w-full min-h-[40px] flex items-center justify-between px-3 py-2 rounded-lg text-left transition ${
+                  active
+                    ? 'bg-[#E50914] text-white font-bold shadow-lg shadow-[#E50914]/25'
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <span className="flex items-center gap-2.5 text-xs font-semibold truncate">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </span>
+                <span
+                  className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
+                    active ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'
+                  }`}
+                >
+                  {item.count}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <main className="lg:pl-60">
 
       {/* Active Player Theater OR Netflix Hero Billboard */}
       {playerOpen && selectedEvent ? (
@@ -903,12 +947,12 @@ export default function ClientHomePage({ initialCatalog }) {
         heroEvent && (
           <section className="relative h-[58vh] min-h-[420px] max-h-[600px] w-full flex items-end overflow-hidden">
             <img
-              src={heroEvent.poster || HERO_FALLBACK_BG}
+              src={heroEvent.bannerImage || heroEvent.poster || HERO_FALLBACK_BG}
               alt={heroEvent.title}
               className="absolute inset-0 w-full h-full object-cover scale-105 opacity-60 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/75 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0c0c0e] via-[#0c0c0e]/75 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-transparent to-black/60" />
 
             <div className="relative z-10 max-w-3xl px-4 sm:px-8 pb-12 space-y-4">
               <div className="flex items-center gap-2">
@@ -925,20 +969,20 @@ export default function ClientHomePage({ initialCatalog }) {
               </h1>
 
               <p className="text-sm text-gray-300 max-w-xl">
-                {heroEvent.status} — Watch multi-source live sports, 24/7 channels, movies, and series with zero-lag HLS switching.
+                {heroEvent.status} — Watch multi-source live sports, 24/7 channels, movies, and anime/TV series.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <button
                   onClick={() => handleSelectEvent(heroEvent)}
-                  className="px-6 py-2.5 rounded-md bg-white hover:bg-white/90 text-black font-extrabold text-sm flex items-center gap-2 transition transform hover:scale-105"
+                  className="min-h-[44px] px-6 py-2.5 rounded-lg bg-white hover:bg-white/90 text-black font-extrabold text-sm flex items-center gap-2 transition transform hover:scale-105"
                 >
                   <Play className="w-4 h-4 fill-current" />
                   Play Now
                 </button>
                 <button
                   onClick={() => togglePin(heroEvent.id)}
-                  className="px-5 py-2.5 rounded-md bg-gray-500/40 hover:bg-gray-500/60 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
+                  className="min-h-[44px] px-5 py-2.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
                 >
                   {pinnedIds.includes(heroEvent.id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                   My List
@@ -949,42 +993,31 @@ export default function ClientHomePage({ initialCatalog }) {
         )
       )}
 
-      {/* Netflix Catalog Rows OR Filtered Grid */}
+      {/* Catalog Rows OR Filtered Grid */}
       <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
-        {/* Full Home Menu Quick-Launch Hub */}
-        <section className="px-4 sm:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-            {[
-              { id: 'LIVE NOW', label: 'Live Now', count: events.filter((e) => e.isLive).length },
-              { id: 'Channels', label: '24/7 Live TV', count: events.filter((e) => e.category === 'Channels').length },
-              { id: 'Movies', label: 'Movies', count: events.filter((e) => e.category === 'Movies').length },
-              { id: 'Shows', label: 'TV Shows', count: events.filter((e) => e.category === 'Shows').length },
-              { id: 'NFL', label: 'NFL', count: events.filter((e) => e.category === 'NFL').length },
-              { id: 'NBA', label: 'NBA', count: events.filter((e) => e.category === 'NBA').length },
-              { id: 'NHL', label: 'NHL', count: events.filter((e) => e.category === 'NHL').length },
-              { id: 'MLB', label: 'MLB', count: events.filter((e) => e.category === 'MLB').length },
-              { id: 'College', label: 'College', count: events.filter((e) => e.category === 'College').length },
-              { id: 'Soccer', label: 'Soccer', count: events.filter((e) => e.category === 'Soccer').length },
-              { id: 'MMA', label: 'UFC / MMA', count: events.filter((e) => e.category === 'MMA').length },
-              { id: 'Sports', label: 'All Sports', count: events.filter((e) => sportsCategories.has(e.category)).length },
-              { id: 'Pinned', label: 'My List', count: events.filter((e) => pinnedIds.includes(e.id)).length },
-              { id: 'Home', label: 'All Catalogs', count: events.length },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg border text-left transition-all duration-200 hover:scale-[1.02] ${
-                  activeTab === item.id
-                    ? 'bg-[#E50914] border-[#E50914] text-white shadow-lg shadow-[#E50914]/25'
-                    : 'bg-[#181818]/90 border-white/10 text-gray-200 hover:border-white/30 hover:bg-[#222]'
-                }`}
-              >
-                <span className="text-xs font-bold truncate">{item.label}</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-300">
-                  {item.count}
-                </span>
-              </button>
-            ))}
+        {/* Mobile & Tablet Category Strip (Desktop uses Left Sidebar Rail) */}
+        <section className="lg:hidden px-4 sm:px-8">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            {menuItems.map((item) => {
+              const active = activeTab === item.id && !searchQuery.trim();
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSearchQuery('');
+                  }}
+                  className={`min-h-[40px] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-bold transition ${
+                    active
+                      ? 'bg-[#E50914] border-[#E50914] text-white'
+                      : 'bg-[#18181b] border-white/10 text-gray-300 hover:border-white/30'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  <span className="text-[10px] font-mono opacity-75">{item.count}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -1082,6 +1115,39 @@ export default function ClientHomePage({ initialCatalog }) {
           </section>
         )}
       </div>
+      </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-white/10 px-2 py-1 flex items-center justify-around"
+      >
+        {[
+          { id: 'Home', label: 'Home', icon: Grid },
+          { id: 'LIVE NOW', label: 'Live', icon: Flame },
+          { id: 'Shows', label: 'Shows', icon: Clapperboard },
+          { id: 'Movies', label: 'Movies', icon: Film },
+          { id: 'Pinned', label: 'My List', icon: Check },
+        ].map((nav) => {
+          const Icon = nav.icon;
+          const active = activeTab === nav.id && !searchQuery.trim();
+          return (
+            <button
+              key={nav.id}
+              onClick={() => {
+                setActiveTab(nav.id);
+                setSearchQuery('');
+              }}
+              className={`min-h-[48px] min-w-[56px] flex flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[11px] font-semibold transition ${
+                active ? 'text-[#E50914]' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{nav.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {showCustomModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
