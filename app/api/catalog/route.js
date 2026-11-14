@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getCatalogData } from '../../../lib/catalog';
+import { getCachedCatalog } from '../../../lib/catalog';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const rotateParam = searchParams.get('rotate');
-  const catalog = await getCatalogData(rotateParam !== null ? Number(rotateParam) : null);
+  const seed = rotateParam !== null && /^\d+$/.test(rotateParam) ? Number(rotateParam) % 8 : null;
+  const catalog = await getCachedCatalog(seed);
 
   return NextResponse.json(catalog, {
     headers: {

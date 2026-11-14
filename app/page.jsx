@@ -1,10 +1,11 @@
-import { getCatalogData } from '../lib/catalog';
+import { getCachedCatalog } from '../lib/catalog';
 import ClientHomePage from './ClientHomePage';
 
-export const dynamic = 'force-dynamic';
+// ISR: serve cached HTML instantly, rebuild in the background at most once a minute.
+export const revalidate = 60;
 
 export default async function Page() {
-  const initialCatalog = await getCatalogData();
+  const initialCatalog = await getCachedCatalog(null);
 
   return <ClientHomePage initialCatalog={initialCatalog} />;
 }

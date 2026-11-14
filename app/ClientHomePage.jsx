@@ -1,716 +1,631 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Hls from 'hls.js';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Play,
-  Radio,
-  Tv,
-  Film,
-  Clapperboard,
-  Trophy,
-  Search,
-  RefreshCw,
-  Shield,
-  Maximize2,
-  Grid,
-  Volume2,
-  VolumeX,
-  Plus,
-  Check,
   AlertTriangle,
-  PictureInPicture2,
-  CheckCircle2,
+  Calendar,
+  Check,
   ChevronLeft,
   ChevronRight,
-  X,
+  Clapperboard,
+  Clock,
+  Film,
   Flame,
+  Grid,
+  Heart,
+  History,
+  Info,
+  Maximize2,
+  Moon,
+  Play,
+  Plus,
+  Radio,
+  RefreshCw,
+  Search,
+  Shield,
+  ShieldAlert,
+  SkipForward,
+  Sparkles,
+  Star,
+  Trophy,
+  Tv,
+  X,
+  ZoomIn,
 } from 'lucide-react';
+import StreamPlayer from './components/StreamPlayer';
+import { MediaCard, MediaRow, SkeletonRow, formatCountdown, FALLBACK_IMG } from './components/MediaCard';
+import { EpisodeGrid } from './components/Episodes';
+import DetailsModal from './components/DetailsModal';
+import { isOnDemand, isSeries, resolveServers } from '../lib/sources';
 
-const NAV_TABS = [
-  { id: 'Home', label: 'Home' },
-  { id: 'LIVE NOW', label: 'Live Now' },
-  { id: 'Sports', label: 'Sports' },
-  { id: 'Channels', label: 'Live TV' },
-  { id: 'Movies', label: 'Movies' },
-  { id: 'Shows', label: 'TV Shows' },
-  { id: 'Pinned', label: 'My List' },
-];
+const SPORTS = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Sports']);
+const TAB_IDS = new Set([
+  'Home', 'LIVE NOW', 'Channels', 'Shows', 'Movies', 'Sports', 'NFL', 'NBA', 'NHL', 'MLB',
+  'College', 'Soccer', 'MMA', 'Pinned', 'History',
+]);
+const FIT_ORDER = ['contain', 'cover', 'zoom'];
+const FIT_LABEL = { contain: 'Fit', cover: 'Fill', zoom: 'Zoom' };
 
-const HERO_FALLBACK_BG =
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1800&q=80';
-
-function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute }) {
-  const videoRef = useRef(null);
-  const hlsRef = useRef(null);
-  const [status, setStatus] = useState('loading');
-  const [resolution, setResolution] = useState('AUTO HD');
-  const [retrySeed, setRetrySeed] = useState(0);
-  const [autoProxied, setAutoProxied] = useState(false);
-
-  const isDirectMp4 = Boolean(stream?.url && /\.mp4(?:$|\?)/i.test(stream.url));
-  const effectiveProxy = (useProxy || autoProxied) && !isDirectMp4;
-
-  const finalUrl = useMemo(() => {
-    if (!stream?.url) return '';
-    if (effectiveProxy && stream.type === 'hls') {
-      return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
-    }
-    return stream.url;
-  }, [stream, effectiveProxy]);
-
-  useEffect(() => {
-    setAutoProxied(false);
-  }, [stream?.url]);
-
-  useEffect(() => {
-    if (!stream || stream.type === 'embed') {
-      setStatus('playing');
-      return;
-    }
-
-    const video = videoRef.current;
-    if (!video || !finalUrl) return;
-
-    setStatus('loading');
-
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    if (isDirectMp4) {
-      video.src = finalUrl;
-      const onLoaded = () => {
-        setResolution('MP4 HD');
-        setStatus('playing');
-        video.play().catch(() => {});
-      };
-      const onErr = () => setStatus('error');
-      video.addEventListener('loadedmetadata', onLoaded);
-      video.addEventListener('error', onErr);
-      return () => {
-        video.removeEventListener('loadedmetadata', onLoaded);
-        video.removeEventListener('error', onErr);
-      };
-    }
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 60,
-      });
-      hlsRef.current = hls;
-
-      hls.loadSource(finalUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        if (data.levels?.length > 0) {
-          const highest = data.levels[data.levels.length - 1];
-          if (highest?.height) setResolution(`${highest.height}p60`);
-        }
-        setStatus('playing');
-        video.play().catch(() => {
-          video.muted = true;
-          video.play().catch(() => {});
-        });
-      });
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              if (!effectiveProxy) {
-                // Auto-fallback to /api/proxy if direct browser HLS hits CORS
-                setAutoProxied(true);
-              } else {
-                setStatus('error');
-                hls.destroy();
-              }
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setStatus('error');
-              hls.destroy();
-              break;
-          }
-        }
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = finalUrl;
-      video.addEventListener('loadedmetadata', () => {
-        setStatus('playing');
-        video.play().catch(() => {});
-      });
-      video.addEventListener('error', () => setStatus('error'));
-    }
-
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
-  }, [finalUrl, stream, retrySeed, isDirectMp4]);
-
-  const handlePiP = async () => {
-    try {
-      if (videoRef.current && document.pictureInPictureElement !== videoRef.current) {
-        await videoRef.current.requestPictureInPicture();
-      } else if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture();
-      }
-    } catch {}
-  };
-
-  return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/15 shadow-[0_25px_70px_rgba(0,0,0,0.85)] group">
-      <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10">
-          <span className="h-2 w-2 rounded-full bg-[#E50914] animate-pulse" />
-          <span className="text-xs font-bold tracking-wide uppercase text-white truncate max-w-[200px] sm:max-w-xs">
-            {title}
-          </span>
-          {subtitle && <span className="text-xs text-gray-400 hidden sm:inline">• {subtitle}</span>}
-        </div>
-        <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[11px] font-mono text-emerald-400">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          {resolution}
-        </div>
-      </div>
-
-      {status === 'loading' && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/85">
-          <RefreshCw className="w-9 h-9 text-[#E50914] animate-spin mb-2" />
-          <span className="text-xs text-gray-300 font-medium tracking-wider uppercase">Loading Stream...</span>
-        </div>
-      )}
-
-      {status === 'error' && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
-          <AlertTriangle className="w-10 h-10 text-amber-500 mb-2" />
-          <p className="text-sm font-bold text-white mb-1">Stream Interrupted</p>
-          <p className="text-xs text-gray-400 max-w-md mb-4">
-            Try switching servers below or toggle Proxy ON/OFF for external M3U8 feeds.
-          </p>
-          <button
-            onClick={() => setRetrySeed((s) => s + 1)}
-            className="px-4 py-2 bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-bold rounded-md flex items-center gap-2 transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Retry Stream
-          </button>
-        </div>
-      )}
-
-      {stream?.type === 'embed' ? (
-        <iframe
-          key={stream.url}
-          src={stream.url}
-          className="w-full h-full border-0 bg-black"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-          allowFullScreen
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        <video
-          ref={videoRef}
-          className="w-full h-full object-contain bg-black"
-          controls
-          playsInline
-          muted={isMuted}
-        />
-      )}
-
-      {stream?.type !== 'embed' && (
-        <div className="absolute bottom-14 right-3 z-20 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <button
-            onClick={onToggleMute}
-            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={handlePiP}
-            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
-            title="Picture in Picture"
-          >
-            <PictureInPicture2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setRetrySeed((s) => s + 1)}
-            className="p-2 rounded-md bg-black/80 hover:bg-[#E50914] text-white border border-white/15 transition"
-            title="Reload Stream"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NetflixCard({ ev, isSelected, isPinned, onSelect, onTogglePin, onSelectSecondary, multiView, index = 0 }) {
-  return (
-    <div
-      onClick={() => onSelect(ev)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(ev);
-        }
-      }}
-      style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
-      className={`group relative cursor-pointer rounded-lg overflow-hidden bg-[#181818] border transition-all duration-300 ease-out transform hover:scale-105 hover:-translate-y-1 hover:z-20 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)] focus:outline-none ${
-        isSelected
-          ? 'border-[#E50914] ring-2 ring-[#E50914]/50'
-          : 'border-white/10 hover:border-white/40'
-      }`}
-    >
-      {ev.poster ? (
-        <div className="relative h-40 w-full overflow-hidden bg-[#111]">
-          <img
-            src={ev.poster}
-            alt={ev.title}
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = HERO_FALLBACK_BG;
-            }}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-black/30 to-transparent" />
-          <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-black/75 text-gray-200">
-              {ev.league}
-            </span>
-            {ev.isLive && (
-              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-[#E50914] text-white shadow">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                LIVE
-              </span>
-            )}
-          </div>
-          <div className="absolute bottom-2 left-3 right-3">
-            <p className="text-sm font-bold text-white truncate drop-shadow">{ev.shortTitle || ev.title}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="p-3.5 h-40 flex flex-col justify-between bg-gradient-to-br from-[#202020] to-[#141414]">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white/10 text-gray-200">
-              {ev.league}
-            </span>
-            {ev.isLive ? (
-              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-[#E50914] text-white">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                {ev.status}
-              </span>
-            ) : (
-              <span className="text-[10px] font-semibold text-gray-400">{ev.status}</span>
-            )}
-          </div>
-
-          <div className="space-y-2 my-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <img src={ev.awayTeam?.logo} alt="" className="w-6 h-6 object-contain shrink-0" />
-                <span className="text-xs font-bold text-white truncate">{ev.awayTeam?.name}</span>
-              </div>
-              <span className="text-sm font-black text-white">{ev.awayTeam?.score}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <img src={ev.homeTeam?.logo} alt="" className="w-6 h-6 object-contain shrink-0" />
-                <span className="text-xs font-bold text-white truncate">{ev.homeTeam?.name}</span>
-              </div>
-              <span className="text-sm font-black text-white">{ev.homeTeam?.score}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Netflix Quick Action Footer */}
-      <div className="px-3.5 py-2.5 bg-[#181818] border-t border-white/5 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-xs font-bold text-white group-hover:text-[#E50914] transition">
-          <span className="w-6 h-6 rounded-full bg-white text-black group-hover:bg-[#E50914] group-hover:text-white flex items-center justify-center transition">
-            <Play className="w-3 h-3 fill-current ml-0.5" />
-          </span>
-          {isSelected ? 'Playing' : 'Play'}
-        </span>
-
-        <div className="flex items-center gap-1.5">
-          {multiView && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectSecondary(ev);
-              }}
-              className="px-2 py-1 rounded bg-white/10 hover:bg-[#E50914] text-[10px] font-bold text-white transition"
-            >
-              #2
-            </button>
-          )}
-          <button
-            onClick={(e) => onTogglePin(ev.id, e)}
-            className={`w-7 h-7 rounded-full border flex items-center justify-center transition ${
-              isPinned
-                ? 'border-white bg-white text-black'
-                : 'border-white/30 text-gray-300 hover:border-white hover:text-white'
-            }`}
-            title={isPinned ? 'Remove from My List' : 'Add to My List'}
-          >
-            {isPinned ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NetflixRow({ title, icon: Icon, items, selectedId, pinnedIds, onSelect, onTogglePin, onSelectSecondary, multiView }) {
-  const railRef = useRef(null);
-  if (!items || items.length === 0) return null;
-
-  const scrollBy = (offset) => {
-    railRef.current?.scrollBy({ left: offset, behavior: 'smooth' });
-  };
-
-  return (
-    <section className="relative group/row space-y-2.5">
-      <div className="flex items-center justify-between px-4 sm:px-8">
-        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 tracking-tight">
-          <Icon className="w-4 h-4 text-[#E50914]" />
-          {title}
-          <span className="text-xs font-medium text-gray-500">({items.length})</span>
-        </h2>
-      </div>
-
-      <div className="relative">
-        <button
-          onClick={() => scrollBy(-520)}
-          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-30 w-10 h-28 rounded-lg bg-black/75 hover:bg-black/95 text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 border border-white/10"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <div
-          ref={railRef}
-          className="flex gap-3.5 overflow-x-auto px-4 sm:px-8 py-3 scroll-smooth snap-x"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {items.map((ev, idx) => (
-            <div key={ev.id} className="w-[240px] sm:w-[270px] shrink-0 snap-start">
-              <NetflixCard
-                ev={ev}
-                index={idx}
-                isSelected={selectedId === ev.id}
-                isPinned={pinnedIds.includes(ev.id)}
-                onSelect={onSelect}
-                onTogglePin={onTogglePin}
-                onSelectSecondary={onSelectSecondary}
-                multiView={multiView}
-              />
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={() => scrollBy(520)}
-          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-30 w-10 h-28 rounded-lg bg-black/75 hover:bg-black/95 text-white items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity duration-200 border border-white/10"
-          aria-label="Scroll right"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-      </div>
-    </section>
-  );
-}
+const loadJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+const saveJson = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+};
 
 export default function ClientHomePage({ initialCatalog }) {
   const initialEvents = initialCatalog?.events || [];
   const [events, setEvents] = useState(initialEvents);
-  const [loading, setLoading] = useState(initialEvents.length === 0);
+  const [rows, setRows] = useState(initialCatalog?.rows || {});
+  const [updatedAt, setUpdatedAt] = useState(initialCatalog?.updatedAt || null);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('Home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(initialEvents[0] || null);
-  const [secondaryEvent, setSecondaryEvent] = useState(initialEvents[1] || initialEvents[0] || null);
+  const [remoteResults, setRemoteResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [secondaryEvent, setSecondaryEvent] = useState(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [serverIdx, setServerIdx] = useState(0);
+  const [activeSeason, setActiveSeason] = useState(1);
+  const [activeEpisode, setActiveEpisode] = useState(1);
+  const [startAt, setStartAt] = useState(0);
   const [useProxy, setUseProxy] = useState(false);
+  const [allowThirdParty, setAllowThirdParty] = useState(true);
   const [multiView, setMultiView] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
+  const [dimMode, setDimMode] = useState(false);
+  const [fitMode, setFitMode] = useState('contain');
   const [isMuted, setIsMuted] = useState(false);
-  const [pinnedIds, setPinnedIds] = useState([]);
+
+  const [pinned, setPinned] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [favTeams, setFavTeams] = useState(['49ers']);
+  const [detailsEvent, setDetailsEvent] = useState(null);
   const [customUrl, setCustomUrl] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [rotationTick, setRotationTick] = useState(0);
-  const [remoteResults, setRemoteResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [activeSeason, setActiveSeason] = useState(1);
-  const [activeEpisode, setActiveEpisode] = useState(1);
+  const [now, setNow] = useState(0);
+  const [toast, setToast] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+
   const searchInputRef = useRef(null);
+  const toastTimer = useRef(null);
+  const rotationRef = useRef(0);
+  const eventsRef = useRef(events);
+  const historyRef = useRef(history);
+  const selectedRef = useRef(selectedEvent);
+  const episodeRef = useRef({ season: 1, episode: 1 });
+  eventsRef.current = events;
+  historyRef.current = history;
+  selectedRef.current = selectedEvent;
+  episodeRef.current = { season: activeSeason, episode: activeEpisode };
 
-  useEffect(() => {
-    try {
-      const savedPins = localStorage.getItem('livewire_pins');
-      if (savedPins) setPinnedIds(JSON.parse(savedPins));
-    } catch {}
+  const pinnedIds = useMemo(() => pinned.map((p) => p.id), [pinned]);
 
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 3500);
   }, []);
 
+  const recordHistory = useCallback((ev, patch) => {
+    if (!ev) return;
+    setHistory((prev) => {
+      const existing = prev.find((h) => h.id === ev.id) || {};
+      const entry = {
+        ...existing,
+        ...patch,
+        id: ev.id,
+        ev: { ...ev, description: (ev.description || '').slice(0, 300) },
+        updatedAt: Date.now(),
+      };
+      const next = [entry, ...prev.filter((h) => h.id !== ev.id)].slice(0, 30);
+      saveJson('livewire_history', next);
+      return next;
+    });
+  }, []);
+
+  const startPlayback = useCallback(
+    (ev, season = 1, episode = 1, opts = {}) => {
+      if (!ev) return;
+      const hist = opts.hist || historyRef.current;
+      const prev = hist.find((h) => h.id === ev.id);
+      const sameEp = Boolean(prev) && (prev.season || 1) === season && (prev.episode || 1) === episode;
+      setSelectedEvent(ev);
+      setActiveSeason(season);
+      setActiveEpisode(episode);
+      setServerIdx(0);
+      setFitMode('contain');
+      setStartAt(!opts.fromStart && sameEp && prev.position ? prev.position : 0);
+      setPlayerOpen(true);
+      setDetailsEvent(null);
+      if (!ev.isLive) {
+        recordHistory(ev, sameEp && !opts.fromStart ? { season, episode } : { season, episode, position: 0, duration: 0 });
+      }
+      if (!opts.skipPush) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('watch', ev.id);
+        if (isSeries(ev)) {
+          params.set('s', String(season));
+          params.set('e', String(episode));
+        } else {
+          params.delete('s');
+          params.delete('e');
+        }
+        window.history.pushState(null, '', `?${params.toString()}`);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [recordHistory],
+  );
+
+  const applyUrl = (params, hist = historyRef.current) => {
+    const tab = params.get('tab');
+    setActiveTab(tab && TAB_IDS.has(tab) ? tab : 'Home');
+    setSearchQuery(params.get('q') || '');
+    const watch = params.get('watch');
+    if (watch) {
+      const h = hist.find((x) => x.id === watch);
+      const ev = eventsRef.current.find((e) => e.id === watch) || h?.ev;
+      if (ev) {
+        startPlayback(ev, Number(params.get('s')) || h?.season || 1, Number(params.get('e')) || h?.episode || 1, {
+          skipPush: true,
+          hist,
+        });
+        return;
+      }
+    }
+    setPlayerOpen(false);
+  };
+  const applyUrlRef = useRef(applyUrl);
+  applyUrlRef.current = applyUrl;
+
+  // Mount: restore local state + deep link
+  useEffect(() => {
+    const legacyPins = loadJson('livewire_pins', []);
+    let pins = loadJson('livewire_pins_v2', null);
+    if (!Array.isArray(pins)) {
+      pins = initialEvents.filter((e) => Array.isArray(legacyPins) && legacyPins.includes(e.id));
+    }
+    const hist = loadJson('livewire_history', []);
+    setPinned(pins);
+    setHistory(Array.isArray(hist) ? hist : []);
+    setFavTeams(loadJson('livewire_teams', ['49ers']));
+    setAllowThirdParty(loadJson('livewire_thirdparty', true) !== false);
+    setNow(Date.now());
+    setHydrated(true);
+    applyUrlRef.current(new URLSearchParams(window.location.search), Array.isArray(hist) ? hist : []);
+
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onPop = () => applyUrlRef.current(new URLSearchParams(window.location.search));
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('popstate', onPop);
+    const tick = setInterval(() => setNow(Date.now()), 30000);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('popstate', onPop);
+      clearInterval(tick);
+    };
+  }, []);
+
+  // Keep URL in sync (shareable links)
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams();
+    if (activeTab !== 'Home') params.set('tab', activeTab);
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    if (playerOpen && selectedEvent) {
+      params.set('watch', selectedEvent.id);
+      if (isSeries(selectedEvent)) {
+        params.set('s', String(activeSeason));
+        params.set('e', String(activeEpisode));
+      }
+    }
+    const qs = params.toString();
+    const target = qs ? `?${qs}` : '';
+    if (target !== window.location.search) {
+      window.history.replaceState(null, '', target || window.location.pathname);
+    }
+  }, [hydrated, activeTab, searchQuery, playerOpen, selectedEvent?.id, activeSeason, activeEpisode]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+      const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+      if (e.key === '/' && !typing) {
         e.preventDefault();
-        setSearchOpen(true);
-        setTimeout(() => searchInputRef.current?.focus(), 50);
+        searchInputRef.current?.focus();
       } else if (e.key === 'Escape') {
         setShowCustomModal(false);
+        if (typing) searchInputRef.current?.blur();
+      } else if ((e.key === 'n' || e.key === 'N') && !typing && playerOpen) {
+        setServerIdx((i) => i + 1);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [playerOpen]);
 
-  const togglePin = (id, e) => {
-    e?.stopPropagation();
-    const updated = pinnedIds.includes(id)
-      ? pinnedIds.filter((item) => item !== id)
-      : [...pinnedIds, id];
-    setPinnedIds(updated);
-    try {
-      localStorage.setItem('livewire_pins', JSON.stringify(updated));
-    } catch {}
-  };
-
-  const handleSelectEvent = (ev) => {
-    setSelectedEvent(ev);
-    setServerIdx(0);
-    setActiveSeason(1);
-    setActiveEpisode(1);
-    setPlayerOpen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
+  // Debounced remote search (anime / TV / archive)
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 2) {
       setRemoteResults([]);
       setSearching(false);
-      return;
+      return undefined;
     }
-
     let cancelled = false;
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
-        if (!cancelled) {
-          setRemoteResults(Array.isArray(data.results) ? data.results : []);
-        }
+        if (!cancelled) setRemoteResults(Array.isArray(data.results) ? data.results : []);
       } catch {
         if (!cancelled) setRemoteResults([]);
       } finally {
         if (!cancelled) setSearching(false);
       }
     }, 350);
-
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
   }, [searchQuery]);
 
-  const fetchCatalog = async (rotateNext = false) => {
-    setLoading(true);
-    try {
-      const nextSeed = rotateNext ? rotationTick + 1 : rotationTick;
-      if (rotateNext) setRotationTick(nextSeed);
-      const url = rotateNext ? `/api/catalog?rotate=${nextSeed}` : '/api/catalog';
-      const res = await fetch(url);
-      const data = await res.json();
-      const list = data.events || [];
-      if (list.length > 0) {
-        setEvents(list);
-        setSelectedEvent((prev) => prev || list[0]);
-        setSecondaryEvent((prev) => prev || list[1] || list[0]);
+  const fetchCatalog = useCallback(
+    async (rotateNext = false) => {
+      if (!rotateNext && typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      setLoading(true);
+      try {
+        let url = '/api/catalog';
+        if (rotateNext) {
+          rotationRef.current += 1;
+          url = `/api/catalog?rotate=${rotationRef.current % 8}`;
+        }
+        const res = await fetch(url, { cache: 'no-store' });
+        const data = await res.json();
+        const list = Array.isArray(data.events) ? data.events : [];
+        if (list.length > 0) {
+          setEvents((prev) => [...prev.filter((e) => String(e.id).startsWith('custom-')), ...list]);
+          setRows(data.rows || {});
+          setUpdatedAt(data.updatedAt || new Date().toISOString());
+          setSelectedEvent((prev) => (prev ? list.find((e) => e.id === prev.id) || prev : prev));
+          setSecondaryEvent((prev) => (prev ? list.find((e) => e.id === prev.id) || prev : prev));
+          if (rotateNext) showToast('Catalog rotated: new movies & shows loaded');
+        }
+      } catch {
+        if (rotateNext) showToast('Could not refresh the catalog');
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error('Failed to refresh catalog:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [showToast],
+  );
+
+  const hasLiveSports = useMemo(() => events.some((e) => e.isLive && SPORTS.has(e.category)), [events]);
 
   useEffect(() => {
-    if (initialEvents.length <= 20) {
-      fetchCatalog(false);
-    }
-    const interval = setInterval(fetchCatalog, 60000);
-    return () => clearInterval(interval);
+    if (initialEvents.length <= 20) fetchCatalog(false);
   }, []);
+
+  // Live scores: refresh every 30s while games are live, otherwise every 60s
+  useEffect(() => {
+    const id = setInterval(() => fetchCatalog(false), hasLiveSports ? 30000 : 60000);
+    return () => clearInterval(id);
+  }, [hasLiveSports, fetchCatalog]);
+
+  const togglePin = useCallback((ev, e) => {
+    e?.stopPropagation?.();
+    setPinned((prev) => {
+      const next = prev.some((p) => p.id === ev.id)
+        ? prev.filter((p) => p.id !== ev.id)
+        : [{ ...ev, description: (ev.description || '').slice(0, 300) }, ...prev];
+      saveJson('livewire_pins_v2', next);
+      return next;
+    });
+  }, []);
+
+  const handleSelect = useCallback(
+    (ev) => {
+      if (isOnDemand(ev)) setDetailsEvent(ev);
+      else startPlayback(ev, 1, 1);
+    },
+    [startPlayback],
+  );
+
+  const handleResume = useCallback(
+    (ev) => {
+      const h = historyRef.current.find((x) => x.id === ev.id);
+      startPlayback(ev, h?.season || 1, h?.episode || 1);
+    },
+    [startPlayback],
+  );
+
+  const closeDetails = useCallback(() => setDetailsEvent(null), []);
+
+  const toggleThirdParty = () => {
+    if (!allowThirdParty) {
+      const ok = window.confirm(
+        'Third-party embed sites are unlicensed and may show pop-ups, ads, or redirects. Enable them anyway?',
+      );
+      if (!ok) return;
+    }
+    const next = !allowThirdParty;
+    setAllowThirdParty(next);
+    setServerIdx(0);
+    saveJson('livewire_thirdparty', next);
+    showToast(next ? '3rd-party sources ON' : '3rd-party sources OFF');
+  };
+
+  const editTeams = () => {
+    const input = window.prompt('Your teams (comma separated)', favTeams.join(', '));
+    if (input === null) return;
+    const next = input.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 10);
+    setFavTeams(next);
+    saveJson('livewire_teams', next);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    saveJson('livewire_history', []);
+  };
+
+  // ---------- Servers ----------
+  const resolvedServers = useMemo(
+    () => resolveServers(selectedEvent, activeSeason, activeEpisode),
+    [selectedEvent, activeSeason, activeEpisode],
+  );
+  const visibleServers = useMemo(
+    () => (allowThirdParty ? resolvedServers : resolvedServers.filter((s) => !s.thirdParty)),
+    [resolvedServers, allowThirdParty],
+  );
+  const hiddenCount = resolvedServers.length - visibleServers.length;
+  const safeIdx = Math.min(serverIdx, Math.max(visibleServers.length - 1, 0));
+  const activeServer = visibleServers[safeIdx];
+  const hasNext = safeIdx < visibleServers.length - 1;
+
+  const nextServer = useCallback(() => {
+    setServerIdx(Math.min(safeIdx + 1, Math.max(visibleServers.length - 1, 0)));
+  }, [safeIdx, visibleServers.length]);
+
+  const handleFail = useCallback(
+    (reason) => {
+      if (safeIdx < visibleServers.length - 1) {
+        const from = visibleServers[safeIdx]?.name || 'Server';
+        const to = visibleServers[safeIdx + 1]?.name || 'next server';
+        showToast(`${from} ${reason === 'timeout' ? 'timed out' : 'failed'}, trying ${to}`);
+        const target = safeIdx;
+        setTimeout(() => setServerIdx((i) => (i === target ? target + 1 : i)), 1200);
+      } else {
+        showToast('All servers tried. Retry, toggle Proxy, or use Open Source.');
+      }
+    },
+    [safeIdx, visibleServers, showToast],
+  );
+
+  const handleProgress = useCallback(
+    (position, duration) => {
+      const ev = selectedRef.current;
+      if (!ev || ev.isLive || !Number.isFinite(duration) || duration <= 0) return;
+      recordHistory(ev, { position, duration, ...episodeRef.current });
+    },
+    [recordHistory],
+  );
+
+  const changeEpisode = (season, episode) => {
+    setActiveSeason(season);
+    setActiveEpisode(episode);
+    setServerIdx(0);
+    setStartAt(0);
+    recordHistory(selectedEvent, { season, episode, position: 0, duration: 0 });
+  };
+
+  const secondaryStream = useMemo(() => {
+    const list = resolveServers(secondaryEvent, 1, 1);
+    return (allowThirdParty ? list : list.filter((s) => !s.thirdParty))[0];
+  }, [secondaryEvent, allowThirdParty]);
+
+  // ---------- Catalog views ----------
+  const eventMap = useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
+  const byIds = useCallback((ids = []) => ids.map((id) => eventMap.get(id)).filter(Boolean), [eventMap]);
+
+  const historyMap = useMemo(() => new Map(history.map((h) => [h.id, h])), [history]);
+  const continueItems = useMemo(
+    () => history.filter((h) => h.ev && !h.ev.isLive).map((h) => eventMap.get(h.id) || h.ev).slice(0, 20),
+    [history, eventMap],
+  );
+  const pinnedItems = useMemo(() => pinned.map((p) => eventMap.get(p.id) || p), [pinned, eventMap]);
+
+  const teamItems = useMemo(() => {
+    const keys = favTeams.map((t) => t.toLowerCase()).filter(Boolean);
+    if (!keys.length) return [];
+    return events.filter(
+      (e) =>
+        SPORTS.has(e.category) &&
+        keys.some((k) => `${e.title} ${e.homeTeam?.name || ''} ${e.awayTeam?.name || ''}`.toLowerCase().includes(k)),
+    );
+  }, [events, favTeams]);
+
+  const liveItems = useMemo(() => events.filter((e) => e.isLive), [events]);
+  const soonItems = useMemo(() => {
+    if (!now) return [];
+    return events
+      .filter(
+        (e) =>
+          SPORTS.has(e.category) &&
+          e.isUpcoming &&
+          e.startTime &&
+          e.startTime > now - 10 * 60000 &&
+          e.startTime - now < 12 * 3600e3,
+      )
+      .sort((a, b) => a.startTime - b.startTime);
+  }, [events, now]);
+  const airingItems = useMemo(() => byIds(rows.airingToday), [byIds, rows]);
+  const trendingAnimeItems = useMemo(() => byIds(rows.trendingAnime), [byIds, rows]);
+  const topRatedItems = useMemo(() => byIds(rows.topRated), [byIds, rows]);
+  const channelItems = useMemo(() => events.filter((e) => e.category === 'Channels'), [events]);
+  const movieItems = useMemo(() => events.filter((e) => e.category === 'Movies'), [events]);
+  const showItems = useMemo(
+    () => events.filter((e) => e.category === 'Shows' && e.mediaType !== 'anime'),
+    [events],
+  );
+  const sportsItems = useMemo(() => events.filter((e) => SPORTS.has(e.category)), [events]);
+
+  const becauseItems = useMemo(() => {
+    if (!pinned.length) return [];
+    const genres = new Set(pinned.flatMap((p) => p.genres || []));
+    const cats = new Set(pinned.map((p) => p.category));
+    return events
+      .filter(
+        (e) =>
+          !pinnedIds.includes(e.id) &&
+          ((e.genres || []).some((g) => genres.has(g)) ||
+            (cats.has(e.category) && !SPORTS.has(e.category) && e.category !== 'Channels')),
+      )
+      .slice(0, 24);
+  }, [events, pinned, pinnedIds]);
 
   const searchedEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return events;
-    const localMatches = events.filter(
-      (ev) =>
-        ev.title?.toLowerCase().includes(q) ||
-        ev.league?.toLowerCase().includes(q) ||
-        ev.category?.toLowerCase().includes(q) ||
-        ev.homeTeam?.name?.toLowerCase().includes(q) ||
-        ev.awayTeam?.name?.toLowerCase().includes(q),
+    const local = events.filter((ev) =>
+      [ev.title, ev.league, ev.category, ev.homeTeam?.name, ev.awayTeam?.name, ...(ev.genres || [])]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
     );
-    const seen = new Set(localMatches.map((e) => e.id));
-    const merged = [...localMatches];
-    for (const item of remoteResults) {
-      if (!seen.has(item.id)) {
-        seen.add(item.id);
-        merged.push(item);
-      }
-    }
-    return merged;
+    const seen = new Set(local.map((e) => e.id));
+    return [...local, ...remoteResults.filter((r) => !seen.has(r.id))];
   }, [events, remoteResults, searchQuery]);
 
-  const sportsCategories = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Sports']);
-
   const visibleGridEvents = useMemo(() => {
-    if (searchQuery.trim().length >= 2) return searchedEvents;
-    if (activeTab === 'LIVE NOW') return searchedEvents.filter((e) => e.isLive);
-    if (activeTab === 'Sports') return searchedEvents.filter((e) => sportsCategories.has(e.category));
-    if (activeTab === 'Pinned') return searchedEvents.filter((e) => pinnedIds.includes(e.id));
-    if (activeTab === 'Home') return searchedEvents;
-    return searchedEvents.filter((e) => e.category === activeTab);
-  }, [searchedEvents, activeTab, pinnedIds, searchQuery]);
+    if (searchQuery.trim()) return searchedEvents;
+    switch (activeTab) {
+      case 'LIVE NOW':
+        return liveItems;
+      case 'Sports':
+        return sportsItems;
+      case 'Pinned':
+        return pinnedItems;
+      case 'History':
+        return continueItems;
+      default:
+        return events.filter((e) => e.category === activeTab);
+    }
+  }, [searchQuery, searchedEvents, activeTab, liveItems, sportsItems, pinnedItems, continueItems, events]);
+
+  const menuItems = useMemo(
+    () => [
+      { id: 'Home', label: 'Home', icon: Grid, count: events.length },
+      { id: 'LIVE NOW', label: 'Live Now', icon: Flame, count: liveItems.length },
+      { id: 'History', label: 'Continue Watching', icon: History, count: continueItems.length },
+      { id: 'Channels', label: '24/7 Live TV', icon: Tv, count: channelItems.length },
+      { id: 'Shows', label: 'Shows & Anime', icon: Clapperboard, count: events.filter((e) => e.category === 'Shows').length },
+      { id: 'Movies', label: 'Movies', icon: Film, count: movieItems.length },
+      { id: 'Sports', label: 'All Sports', icon: Trophy, count: sportsItems.length },
+      ...['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA'].map((c) => ({
+        id: c,
+        label: c === 'MMA' ? 'UFC / MMA' : c,
+        icon: Radio,
+        count: events.filter((e) => e.category === c).length,
+      })),
+      { id: 'Pinned', label: 'My List', icon: Heart, count: pinned.length },
+    ],
+    [events, liveItems, continueItems, channelItems, movieItems, sportsItems, pinned],
+  );
+
+  const heroEvent = useMemo(
+    () =>
+      events.find((e) => e.isLive && SPORTS.has(e.category)) ||
+      trendingAnimeItems.find((e) => e.bannerImage) ||
+      events.find((e) => e.poster) ||
+      events[0],
+    [events, trendingAnimeItems],
+  );
+
+  const getProgress = useCallback(
+    (ev) => {
+      const h = historyMap.get(ev.id);
+      if (!h || !h.duration) return undefined;
+      return h.position / h.duration;
+    },
+    [historyMap],
+  );
+  const getContinueBadge = useCallback(
+    (ev) => {
+      const h = historyMap.get(ev.id);
+      if (!h) return undefined;
+      if (isSeries(ev)) return `Continue S${h.season || 1} · E${h.episode || 1}`;
+      if (h.duration) return `${Math.round((h.position / h.duration) * 100)}% watched`;
+      return 'Continue';
+    },
+    [historyMap],
+  );
+  const getCountdownBadge = useCallback((ev) => (now ? formatCountdown(ev.startTime, now) : undefined), [now]);
+  const getAiringBadge = useCallback(
+    (ev) => {
+      if (!ev.startTime || !now) return ev.status;
+      return ev.startTime > now ? `${ev.status} · ${formatCountdown(ev.startTime, now)}` : `${ev.status} · out now`;
+    },
+    [now],
+  );
+
+  const cardProps = {
+    selectedId: playerOpen ? selectedEvent?.id : null,
+    pinnedIds,
+    onSelect: handleSelect,
+    onTogglePin: togglePin,
+    onSelectSecondary: setSecondaryEvent,
+    multiView,
+  };
+
+  const updatedLabel = hydrated && updatedAt ? new Date(updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '';
+  const isSportsEvent = selectedEvent && SPORTS.has(selectedEvent.category) && selectedEvent.homeTeam;
 
   const handleLoadCustomStream = (e) => {
     e.preventDefault();
-    if (!customUrl.trim()) return;
     const trimmed = customUrl.trim();
+    if (!trimmed) return;
     const isEmbed = !trimmed.includes('.m3u8') && !trimmed.includes('.mp4');
     const customEvent = {
       id: `custom-${Date.now()}`,
-      title: 'Custom Live Feed',
+      title: 'Custom Stream',
       shortTitle: 'Custom Stream',
       category: 'Channels',
       league: isEmbed ? 'EMBED' : 'CUSTOM HLS',
       status: 'LIVE',
       isLive: true,
-      homeTeam: { name: 'Custom', score: 'HD', logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nfl.png' },
-      awayTeam: { name: 'Source', score: 'LIVE', logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500/nba.png' },
-      servers: [{ name: 'Custom Source', type: isEmbed ? 'embed' : 'hls', url: trimmed }],
+      homeTeam: { name: 'Custom', score: 'HD', logo: FALLBACK_IMG },
+      awayTeam: { name: 'Source', score: 'LIVE', logo: FALLBACK_IMG },
+      servers: [{ name: 'Custom Source', type: isEmbed ? 'embed' : 'hls', url: trimmed, thirdParty: false }],
     };
     setEvents((prev) => [customEvent, ...prev]);
-    handleSelectEvent(customEvent);
+    startPlayback(customEvent, 1, 1);
     setCustomUrl('');
     setShowCustomModal(false);
   };
 
-  const heroEvent = selectedEvent || events[0];
+  const selectTab = (id) => {
+    setActiveTab(id);
+    setSearchQuery('');
+    if (playerOpen) window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  const resolvedServers = useMemo(() => {
-    if (!selectedEvent) return [];
-    if (selectedEvent.mediaType === 'anime' && (selectedEvent.aniId || selectedEvent.malId)) {
-      const list = [];
-      if (selectedEvent.aniId) {
-        list.push(
-          {
-            name: `AutoEmbed (Ep ${activeEpisode})`,
-            type: 'embed',
-            url: `https://player.autoembed.cc/embed/anime/${selectedEvent.aniId}/${activeEpisode}`,
-          },
-          {
-            name: `VidSrc.cc Sub (Ep ${activeEpisode})`,
-            type: 'embed',
-            url: `https://vidsrc.cc/v2/embed/anime/ani-${selectedEvent.aniId}/${activeEpisode}/sub`,
-          },
-          {
-            name: `VidSrc.cc Dub (Ep ${activeEpisode})`,
-            type: 'embed',
-            url: `https://vidsrc.cc/v2/embed/anime/ani-${selectedEvent.aniId}/${activeEpisode}/dub`,
-          },
-          {
-            name: `VidSrc.icu (Ep ${activeEpisode})`,
-            type: 'embed',
-            url: `https://vidsrc.icu/embed/anime/${selectedEvent.aniId}/${activeEpisode}/0`,
-          },
-        );
-      }
-      if (selectedEvent.malId) {
-        list.push({
-          name: `VidSrc MAL (Ep ${activeEpisode})`,
-          type: 'embed',
-          url: `https://vidsrc.cc/v2/embed/anime/mal-${selectedEvent.malId}/${activeEpisode}/sub`,
-        });
-      }
-      return list;
-    }
-    if (selectedEvent.mediaType === 'tv' && selectedEvent.imdbId) {
-      return [
-        {
-          name: `AutoEmbed (S${activeSeason} E${activeEpisode})`,
-          type: 'embed',
-          url: `https://player.autoembed.cc/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
-        },
-        {
-          name: `VidSrc.cc (S${activeSeason} E${activeEpisode})`,
-          type: 'embed',
-          url: `https://vidsrc.cc/v2/embed/tv/${selectedEvent.imdbId}/${activeSeason}/${activeEpisode}`,
-        },
-        {
-          name: `VidSrc.xyz (S${activeSeason} E${activeEpisode})`,
-          type: 'embed',
-          url: `https://vidsrc.xyz/embed/tv/${selectedEvent.imdbId}/${activeSeason}-${activeEpisode}`,
-        },
-        {
-          name: `2Embed (S${activeSeason} E${activeEpisode})`,
-          type: 'embed',
-          url: `https://www.2embed.cc/embedtv/${selectedEvent.imdbId}&s=${activeSeason}&e=${activeEpisode}`,
-        },
-      ];
-    }
-    return selectedEvent.servers || [];
-  }, [selectedEvent, activeSeason, activeEpisode]);
-
-  const activeServer = resolvedServers[serverIdx] || resolvedServers[0];
-
-  const menuItems = useMemo(
-    () => [
-      { id: 'Home', label: 'All Catalogs', icon: Grid, count: events.length },
-      { id: 'LIVE NOW', label: 'Live Now', icon: Flame, count: events.filter((e) => e.isLive).length },
-      { id: 'Channels', label: '24/7 Live TV', icon: Tv, count: events.filter((e) => e.category === 'Channels').length },
-      { id: 'Shows', label: 'Shows & Anime', icon: Clapperboard, count: events.filter((e) => e.category === 'Shows').length },
-      { id: 'Movies', label: 'Movies', icon: Film, count: events.filter((e) => e.category === 'Movies').length },
-      { id: 'Sports', label: 'All Sports', icon: Trophy, count: events.filter((e) => sportsCategories.has(e.category)).length },
-      { id: 'NFL', label: 'NFL', icon: Radio, count: events.filter((e) => e.category === 'NFL').length },
-      { id: 'NBA', label: 'NBA', icon: Radio, count: events.filter((e) => e.category === 'NBA').length },
-      { id: 'NHL', label: 'NHL', icon: Radio, count: events.filter((e) => e.category === 'NHL').length },
-      { id: 'MLB', label: 'MLB', icon: Radio, count: events.filter((e) => e.category === 'MLB').length },
-      { id: 'College', label: 'College', icon: Radio, count: events.filter((e) => e.category === 'College').length },
-      { id: 'Soccer', label: 'Soccer', icon: Radio, count: events.filter((e) => e.category === 'Soccer').length },
-      { id: 'MMA', label: 'UFC / MMA', icon: Radio, count: events.filter((e) => e.category === 'MMA').length },
-      { id: 'Pinned', label: 'My List', icon: Check, count: events.filter((e) => pinnedIds.includes(e.id)).length },
-    ],
-    [events, pinnedIds],
-  );
+  const showRows = activeTab === 'Home' && !searchQuery.trim();
+  const isEmptyCatalog = events.length === 0;
 
   return (
     <div className="min-h-screen bg-[#0c0c0e] text-white overflow-x-hidden pb-24 lg:pb-14">
-      {/* Top Cinema Control Bar */}
+      {/* ===== Header ===== */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${
           scrolled || playerOpen
@@ -718,99 +633,105 @@ export default function ClientHomePage({ initialCatalog }) {
             : 'bg-gradient-to-b from-black/95 via-black/60 to-transparent'
         }`}
       >
-        <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+        <div className="px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
           <button
             onClick={() => {
-              setActiveTab('Home');
-              setSearchQuery('');
+              selectTab('Home');
+              setPlayerOpen(false);
             }}
-            aria-label="Live Wire Home"
-            className="text-xl sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E50914] rounded px-1"
+            aria-label="Live Wire home"
+            className="text-lg sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0 rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E50914]"
           >
             LIVE WIRE
           </button>
 
-          <div className="flex-1 max-w-md mx-2">
-            <div className="flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-black/80 focus-within:border-[#E50914] border border-white/15 rounded-full px-3.5 h-10 transition">
+          <div className="flex-1 max-w-md">
+            <div className="flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-black/80 focus-within:border-[#E50914] border border-white/15 rounded-full px-3 h-10 transition">
               <Search className="w-4 h-4 text-gray-300 mr-2 shrink-0" />
               <input
                 ref={searchInputRef}
-                type="text"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search anime, TV shows, movies, and sports"
-                placeholder="Search anime, shows, teams... (/)"
-                className="bg-transparent text-xs sm:text-sm text-white placeholder-gray-400 focus:outline-none w-full"
+                placeholder="Search anime, shows, teams…"
+                className="bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none w-full min-w-0"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                  className="text-gray-400 hover:text-white ml-1 p-1"
-                >
+              {searching && <RefreshCw className="w-3.5 h-3.5 text-gray-400 animate-spin shrink-0" />}
+              {searchQuery && !searching && (
+                <button onClick={() => setSearchQuery('')} aria-label="Clear search" className="text-gray-400 hover:text-white p-1">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={toggleThirdParty}
+              aria-pressed={allowThirdParty}
+              aria-label="Toggle third-party sources"
+              title="Third-party embed sources (unlicensed)"
+              className={`h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition ${
+                allowThirdParty
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span className="hidden md:inline">3rd-party</span>
+              <span className="hidden sm:inline">{allowThirdParty ? 'ON' : 'OFF'}</span>
+            </button>
             <button
               onClick={() => setUseProxy((p) => !p)}
-              aria-label="Toggle HLS Proxy"
-              className={`h-10 px-3 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition ${
+              aria-pressed={useProxy}
+              aria-label="Toggle HLS proxy"
+              className={`hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
                 useProxy
                   ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                   : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
               }`}
             >
-              <Shield className="w-3.5 h-3.5" />
+              <Shield className="w-4 h-4" />
               <span className="hidden md:inline">Proxy</span> {useProxy ? 'ON' : 'OFF'}
             </button>
-
             <button
               onClick={() => setMultiView((m) => !m)}
-              aria-label="Toggle Multi-View"
-              className={`hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
-                multiView
-                  ? 'bg-[#E50914] border-[#E50914] text-white'
-                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
+              aria-pressed={multiView}
+              aria-label="Toggle multi-view"
+              className={`hidden md:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
+                multiView ? 'bg-[#E50914] border-[#E50914] text-white' : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
               }`}
             >
-              <Grid className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Multi</span>
+              <Grid className="w-4 h-4" /> Multi
             </button>
-
             <button
               onClick={() => setShowCustomModal(true)}
-              aria-label="Add Custom Stream"
-              className="h-10 px-3 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center gap-1.5 transition"
+              aria-label="Add custom stream"
+              className="hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white items-center gap-1.5 transition"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden md:inline">Add</span>
             </button>
-
             <button
               onClick={() => fetchCatalog(true)}
-              aria-label="Rotate Catalog"
-              className="h-10 px-3 rounded-lg bg-white/10 hover:bg-[#E50914] text-white text-xs font-bold flex items-center gap-1.5 transition"
-              title="Rotate New Movies & Shows"
+              aria-label="Rotate catalog"
+              title="Rotate new movies & shows"
+              className="h-10 w-10 sm:w-auto sm:px-3 rounded-lg bg-white/10 hover:bg-[#E50914] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden md:inline">Rotate</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Desktop Left Sidebar Rail */}
+      {/* ===== Desktop sidebar ===== */}
       <aside
-        aria-label="Browse Categories"
+        aria-label="Browse categories"
         className="hidden lg:flex flex-col fixed left-0 top-16 bottom-0 w-60 z-30 bg-[#0c0c0e]/95 backdrop-blur-xl border-r border-white/10 px-3 py-4 overflow-y-auto"
       >
-        <p className="px-3 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
-          Browse Menu
-        </p>
+        <p className="px-3 mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Browse</p>
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -818,316 +739,443 @@ export default function ClientHomePage({ initialCatalog }) {
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSearchQuery('');
-                }}
+                onClick={() => selectTab(item.id)}
+                aria-current={active ? 'page' : undefined}
                 className={`w-full min-h-[40px] flex items-center justify-between px-3 py-2 rounded-lg text-left transition ${
-                  active
-                    ? 'bg-[#E50914] text-white font-bold shadow-lg shadow-[#E50914]/25'
-                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  active ? 'bg-[#E50914] text-white font-bold shadow-lg shadow-[#E50914]/25' : 'text-gray-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <span className="flex items-center gap-2.5 text-xs font-semibold truncate">
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate">{item.label}</span>
                 </span>
-                <span
-                  className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    active ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'
-                  }`}
-                >
+                <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${active ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'}`}>
                   {item.count}
                 </span>
               </button>
             );
           })}
         </nav>
+        <div className="mt-auto pt-4 px-3 text-[11px] text-gray-500 space-y-1">
+          {updatedLabel && <p>Scores updated {updatedLabel}</p>}
+          <p>
+            Press <kbd className="px-1 rounded bg-white/10">/</kbd> to search · <kbd className="px-1 rounded bg-white/10">N</kbd> next server
+          </p>
+        </div>
       </aside>
 
       <main className="lg:pl-60">
+        {/* ===== Player OR Hero ===== */}
+        {playerOpen && selectedEvent ? (
+          <section
+            className={`relative ${dimMode ? 'z-[35]' : ''} pt-20 px-3 sm:px-6 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-6xl'} space-y-3`}
+          >
+            <div className={`grid gap-4 ${multiView ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+              {activeServer ? (
+                <StreamPlayer
+                  key={activeServer.url}
+                  stream={activeServer}
+                  title={selectedEvent.shortTitle || selectedEvent.title}
+                  subtitle={activeServer.name}
+                  useProxy={useProxy}
+                  isMuted={isMuted}
+                  onToggleMute={() => setIsMuted((m) => !m)}
+                  onFail={handleFail}
+                  onNext={nextServer}
+                  hasNext={hasNext}
+                  startAt={startAt}
+                  onProgress={handleProgress}
+                  fitMode={fitMode}
+                />
+              ) : (
+                <div className="w-full aspect-video rounded-xl border border-amber-500/30 bg-gradient-to-br from-[#1a1508] to-black flex flex-col items-center justify-center text-center p-6 gap-3">
+                  <AlertTriangle className="w-10 h-10 text-amber-400" />
+                  <p className="text-sm font-bold text-white">Only third-party sources available</p>
+                  <p className="text-xs text-gray-400 max-w-md">
+                    {hiddenCount} source{hiddenCount === 1 ? '' : 's'} hidden. These embed sites are unlicensed and may show pop-ups
+                    or redirects.
+                  </p>
+                  <button
+                    onClick={toggleThirdParty}
+                    className="min-h-[44px] px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold transition"
+                  >
+                    Enable 3rd-party sources
+                  </button>
+                </div>
+              )}
+              {multiView && secondaryEvent && secondaryStream && (
+                <StreamPlayer
+                  key={`second-${secondaryStream.url}`}
+                  stream={secondaryStream}
+                  title={secondaryEvent.shortTitle || secondaryEvent.title}
+                  subtitle={secondaryStream.name}
+                  useProxy={useProxy}
+                  isMuted
+                  onToggleMute={() => {}}
+                />
+              )}
+            </div>
 
-      {/* Active Player Theater OR Netflix Hero Billboard */}
-      {playerOpen && selectedEvent ? (
-        <section className={`pt-24 sm:pt-20 px-4 sm:px-8 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-7xl'} space-y-3`}>
-          <div className={`grid gap-4 ${multiView ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-            <StreamPlayer
-              stream={activeServer}
-              title={selectedEvent.shortTitle || selectedEvent.title}
-              subtitle={activeServer?.name}
-              useProxy={useProxy}
-              isMuted={isMuted}
-              onToggleMute={() => setIsMuted((m) => !m)}
-            />
-            {multiView && secondaryEvent && (
-              <StreamPlayer
-                stream={secondaryEvent.servers?.[0]}
-                title={secondaryEvent.shortTitle || secondaryEvent.title}
-                subtitle={secondaryEvent.servers?.[0]?.name}
-                useProxy={useProxy}
-                isMuted={true}
-                onToggleMute={() => {}}
-              />
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#181818] border border-white/10 p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {resolvedServers.map((srv, idx) => (
-                <button
-                  key={`${srv.name}-${idx}`}
-                  onClick={() => setServerIdx(idx)}
-                  className={`px-3 py-1.5 rounded text-xs font-bold transition ${
-                    serverIdx === idx
-                      ? 'bg-[#E50914] text-white'
-                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  {srv.name}
-                </button>
-              ))}
-
-              {(selectedEvent.mediaType === 'anime' || selectedEvent.mediaType === 'tv') && (
-                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-white/15">
-                  {selectedEvent.mediaType === 'tv' && (
-                    <label className="flex items-center gap-1 text-[11px] text-gray-300 font-semibold">
-                      S
-                      <input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={activeSeason}
-                        onChange={(e) => setActiveSeason(Math.max(1, Number(e.target.value) || 1))}
-                        className="w-11 bg-black/60 border border-white/20 rounded px-1.5 py-1 text-xs text-white text-center"
-                      />
-                    </label>
+            <div className="rounded-xl bg-[#141416] border border-white/10 p-3 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-lg font-black text-white truncate">{selectedEvent.title}</h1>
+                  <p className="text-xs text-gray-400 truncate">
+                    {isSportsEvent ? (
+                      <>
+                        <span className="text-white font-bold tabular-nums">
+                          {selectedEvent.awayTeam?.name} {selectedEvent.awayTeam?.score} – {selectedEvent.homeTeam?.score}{' '}
+                          {selectedEvent.homeTeam?.name}
+                        </span>{' '}
+                        · {selectedEvent.status}
+                        {updatedLabel && <span className="text-gray-500"> · updated {updatedLabel}</span>}
+                      </>
+                    ) : (
+                      <>
+                        {selectedEvent.league}
+                        {isSeries(selectedEvent) && ` · Season ${activeSeason} · Episode ${activeEpisode}`}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeServer?.url && (
+                    <a
+                      href={activeServer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-[#E50914] text-white flex items-center transition"
+                    >
+                      Open Source ↗
+                    </a>
                   )}
-                  <label className="flex items-center gap-1 text-[11px] text-gray-300 font-semibold">
-                    Ep
-                    <input
-                      type="number"
-                      min={1}
-                      max={selectedEvent.totalEpisodes || 200}
-                      value={activeEpisode}
-                      onChange={(e) => setActiveEpisode(Math.max(1, Number(e.target.value) || 1))}
-                      className="w-12 bg-black/60 border border-white/20 rounded px-1.5 py-1 text-xs text-white text-center"
-                    />
-                  </label>
+                  <button
+                    onClick={() => setFitMode((f) => FIT_ORDER[(FIT_ORDER.indexOf(f) + 1) % FIT_ORDER.length])}
+                    aria-label="Cycle zoom"
+                    className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 transition"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" /> {FIT_LABEL[fitMode]}
+                  </button>
+                  {fitMode !== 'contain' && (
+                    <button
+                      onClick={() => setFitMode('contain')}
+                      className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 transition"
+                    >
+                      Reset zoom
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setDimMode((d) => !d)}
+                    aria-pressed={dimMode}
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                      dimMode ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" /> Dim
+                  </button>
+                  <button
+                    onClick={() => setTheaterMode((t) => !t)}
+                    aria-pressed={theaterMode}
+                    className="hidden sm:flex min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white items-center gap-1.5 transition"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" /> Theater
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPlayerOpen(false);
+                      setDimMode(false);
+                    }}
+                    className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 flex items-center gap-1 transition"
+                  >
+                    <X className="w-3.5 h-3.5" /> Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {visibleServers.map((srv, idx) => (
+                  <button
+                    key={`${srv.url}-${idx}`}
+                    onClick={() => setServerIdx(idx)}
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                      safeIdx === idx ? 'bg-[#E50914] text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    }`}
+                  >
+                    {srv.name}
+                    {srv.thirdParty && (
+                      <span className="text-[9px] font-black px-1 py-0.5 rounded bg-amber-500/30 text-amber-200" title="Third-party source">
+                        3P
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {hasNext && (
+                  <button
+                    onClick={nextServer}
+                    className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-black hover:bg-white/90 flex items-center gap-1.5 transition"
+                  >
+                    <SkipForward className="w-3.5 h-3.5" /> Next server
+                  </button>
+                )}
+                {hiddenCount > 0 && activeServer && (
+                  <button onClick={toggleThirdParty} className="text-[11px] text-amber-300/80 hover:text-amber-200 underline underline-offset-2">
+                    +{hiddenCount} third-party hidden
+                  </button>
+                )}
+              </div>
+
+              {isSeries(selectedEvent) && (
+                <div className="space-y-2 pt-1 border-t border-white/10">
+                  <div className="flex items-center justify-between pt-2">
+                    <h2 className="text-sm font-bold text-white">Episodes</h2>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => changeEpisode(activeSeason, Math.max(1, activeEpisode - 1))}
+                        disabled={activeEpisode <= 1}
+                        aria-label="Previous episode"
+                        className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => changeEpisode(activeSeason, activeEpisode + 1)}
+                        aria-label="Next episode"
+                        className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold flex items-center gap-1"
+                      >
+                        Next ep <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <EpisodeGrid
+                    ev={selectedEvent}
+                    activeSeason={activeSeason}
+                    activeEpisode={activeEpisode}
+                    onPick={changeEpisode}
+                    compact
+                  />
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {activeServer?.url && (
-                <a
-                  href={activeServer.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-[#E50914] text-white transition"
-                >
-                  Open Source ↗
-                </a>
-              )}
-              <button
-                onClick={() => setTheaterMode((t) => !t)}
-                className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 transition"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Theater
-              </button>
-              <button
-                onClick={() => setPlayerOpen(false)}
-                className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-white/20 text-gray-200 flex items-center gap-1 transition"
-              >
-                <X className="w-3.5 h-3.5" /> Close Player
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : (
-        heroEvent && (
-          <section className="relative h-[58vh] min-h-[420px] max-h-[600px] w-full flex items-end overflow-hidden">
-            <img
-              src={heroEvent.bannerImage || heroEvent.poster || HERO_FALLBACK_BG}
-              alt={heroEvent.title}
-              className="absolute inset-0 w-full h-full object-cover scale-105 opacity-60 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0c0c0e] via-[#0c0c0e]/75 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-transparent to-black/60" />
-
-            <div className="relative z-10 max-w-3xl px-4 sm:px-8 pb-12 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#E50914] text-[11px] font-black tracking-wider uppercase text-white">
-                  {heroEvent.isLive ? 'LIVE NOW' : 'FEATURED'}
-                </span>
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-300">
-                  {heroEvent.league} • {events.length} Streams Ready
-                </span>
-              </div>
-
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-lg">
-                {heroEvent.title}
-              </h1>
-
-              <p className="text-sm text-gray-300 max-w-xl">
-                {heroEvent.status} — Watch multi-source live sports, 24/7 channels, movies, and anime/TV series.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <button
-                  onClick={() => handleSelectEvent(heroEvent)}
-                  className="min-h-[44px] px-6 py-2.5 rounded-lg bg-white hover:bg-white/90 text-black font-extrabold text-sm flex items-center gap-2 transition transform hover:scale-105"
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  Play Now
-                </button>
-                <button
-                  onClick={() => togglePin(heroEvent.id)}
-                  className="min-h-[44px] px-5 py-2.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
-                >
-                  {pinnedIds.includes(heroEvent.id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  My List
-                </button>
-              </div>
-            </div>
           </section>
-        )
-      )}
-
-      {/* Catalog Rows OR Filtered Grid */}
-      <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
-        {/* Mobile & Tablet Category Strip (Desktop uses Left Sidebar Rail) */}
-        <section className="lg:hidden px-4 sm:px-8">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-            {menuItems.map((item) => {
-              const active = activeTab === item.id && !searchQuery.trim();
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setSearchQuery('');
-                  }}
-                  className={`min-h-[40px] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-bold transition ${
-                    active
-                      ? 'bg-[#E50914] border-[#E50914] text-white'
-                      : 'bg-[#18181b] border-white/10 text-gray-300 hover:border-white/30'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[10px] font-mono opacity-75">{item.count}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {activeTab === 'Home' && !searchQuery.trim() ? (
-          <>
-            <NetflixRow
-              title="Trending Live Now"
-              icon={Flame}
-              items={searchedEvents.filter((e) => e.isLive)}
-              selectedId={selectedEvent?.id}
-              pinnedIds={pinnedIds}
-              onSelect={handleSelectEvent}
-              onTogglePin={togglePin}
-              onSelectSecondary={setSecondaryEvent}
-              multiView={multiView}
-            />
-            <NetflixRow
-              title="24/7 Live Channels"
-              icon={Tv}
-              items={searchedEvents.filter((e) => e.category === 'Channels')}
-              selectedId={selectedEvent?.id}
-              pinnedIds={pinnedIds}
-              onSelect={handleSelectEvent}
-              onTogglePin={togglePin}
-              onSelectSecondary={setSecondaryEvent}
-              multiView={multiView}
-            />
-            <NetflixRow
-              title="Popular Movies"
-              icon={Film}
-              items={searchedEvents.filter((e) => e.category === 'Movies')}
-              selectedId={selectedEvent?.id}
-              pinnedIds={pinnedIds}
-              onSelect={handleSelectEvent}
-              onTogglePin={togglePin}
-              onSelectSecondary={setSecondaryEvent}
-              multiView={multiView}
-            />
-            <NetflixRow
-              title="TV Shows & Live News"
-              icon={Clapperboard}
-              items={searchedEvents.filter((e) => e.category === 'Shows')}
-              selectedId={selectedEvent?.id}
-              pinnedIds={pinnedIds}
-              onSelect={handleSelectEvent}
-              onTogglePin={togglePin}
-              onSelectSecondary={setSecondaryEvent}
-              multiView={multiView}
-            />
-            <NetflixRow
-              title="All Sports & Matchups"
-              icon={Trophy}
-              items={searchedEvents.filter((e) => sportsCategories.has(e.category))}
-              selectedId={selectedEvent?.id}
-              pinnedIds={pinnedIds}
-              onSelect={handleSelectEvent}
-              onTogglePin={togglePin}
-              onSelectSecondary={setSecondaryEvent}
-              multiView={multiView}
-            />
-          </>
         ) : (
-          <section className="px-4 sm:px-8 pt-6 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Radio className="w-4 h-4 text-[#E50914]" />
-              {searchQuery.trim() ? `Results for "${searchQuery}"` : activeTab} ({visibleGridEvents.length})
-              {searching && (
-                <span className="text-xs font-medium text-gray-400 animate-pulse ml-2">
-                  Searching TV, Anime & Archive...
-                </span>
-              )}
-            </h2>
+          heroEvent && (
+            <section className="relative h-[56vh] min-h-[400px] max-h-[580px] w-full flex items-end overflow-hidden">
+              <img
+                key={heroEvent.id}
+                src={heroEvent.bannerImage || heroEvent.poster || FALLBACK_IMG}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.src = FALLBACK_IMG;
+                }}
+                className="absolute inset-0 w-full h-full object-cover opacity-60"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0c0c0e] via-[#0c0c0e]/75 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0e] via-transparent to-black/60" />
 
-            {visibleGridEvents.length === 0 ? (
-              <div className="rounded-xl bg-[#181818] border border-white/10 p-10 text-center text-sm text-gray-400">
-                {searching ? 'Searching across Anime, TV Shows & Archive...' : 'No streams matched your filter.'}
+              <div className="relative z-10 max-w-3xl px-4 sm:px-8 pb-12 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-[#E50914] text-[11px] font-black tracking-wider uppercase text-white">
+                    {heroEvent.isLive ? 'LIVE NOW' : 'FEATURED'}
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-300">
+                    {heroEvent.league} · {events.length} titles
+                  </span>
+                </div>
+                <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-lg line-clamp-2">
+                  {heroEvent.title}
+                </h1>
+                {SPORTS.has(heroEvent.category) && heroEvent.homeTeam ? (
+                  <p className="text-lg font-black text-white tabular-nums">
+                    {heroEvent.awayTeam?.name} {heroEvent.awayTeam?.score} – {heroEvent.homeTeam?.score} {heroEvent.homeTeam?.name}
+                    <span className="ml-2 text-sm font-semibold text-gray-300">{heroEvent.status}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-300 max-w-xl line-clamp-3">
+                    {heroEvent.description || `${heroEvent.status}: live sports, 24/7 channels, movies, and anime/TV series.`}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    onClick={() => handleSelect(heroEvent)}
+                    className="min-h-[44px] px-6 py-2.5 rounded-lg bg-white hover:bg-white/90 text-black font-extrabold text-sm flex items-center gap-2 transition motion-safe:hover:scale-105"
+                  >
+                    <Play className="w-4 h-4 fill-current" /> Play
+                  </button>
+                  {isOnDemand(heroEvent) && (
+                    <button
+                      onClick={() => setDetailsEvent(heroEvent)}
+                      className="min-h-[44px] px-5 py-2.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
+                    >
+                      <Info className="w-4 h-4" /> More Info
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => togglePin(heroEvent, e)}
+                    className="min-h-[44px] px-5 py-2.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur text-white font-bold text-sm flex items-center gap-2 transition"
+                  >
+                    {pinnedIds.includes(heroEvent.id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />} My List
+                  </button>
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                {visibleGridEvents.map((ev, idx) => (
-                  <NetflixCard
-                    key={ev.id}
-                    ev={ev}
-                    index={idx}
-                    isSelected={selectedEvent?.id === ev.id}
-                    isPinned={pinnedIds.includes(ev.id)}
-                    onSelect={handleSelectEvent}
-                    onTogglePin={togglePin}
-                    onSelectSecondary={setSecondaryEvent}
-                    multiView={multiView}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+            </section>
+          )
         )}
-      </div>
+
+        {/* ===== Catalog ===== */}
+        <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
+          {/* Mobile/tablet category strip */}
+          <section className="lg:hidden px-4 sm:px-8">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {menuItems.map((item) => {
+                const active = activeTab === item.id && !searchQuery.trim();
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => selectTab(item.id)}
+                    className={`min-h-[40px] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-bold transition ${
+                      active ? 'bg-[#E50914] border-[#E50914] text-white' : 'bg-[#18181b] border-white/10 text-gray-300 hover:border-white/30'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    <span className="text-[10px] font-mono opacity-75">{item.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {isEmptyCatalog ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : showRows ? (
+            <>
+              <MediaRow
+                title="Continue Watching"
+                icon={History}
+                items={continueItems}
+                getBadge={getContinueBadge}
+                getProgress={getProgress}
+                cardProps={{ ...cardProps, onSelect: handleResume }}
+                action={
+                  <button onClick={clearHistory} className="text-xs font-semibold text-gray-400 hover:text-white">
+                    Clear
+                  </button>
+                }
+              />
+              <MediaRow
+                title={`Your Teams${favTeams.length ? ` · ${favTeams.join(', ')}` : ''}`}
+                icon={Heart}
+                items={teamItems}
+                getBadge={(ev) => (ev.isUpcoming ? getCountdownBadge(ev) : undefined)}
+                cardProps={cardProps}
+                action={
+                  <button onClick={editTeams} className="text-xs font-semibold text-gray-400 hover:text-white">
+                    Edit teams
+                  </button>
+                }
+              />
+              <MediaRow title="Trending Live Now" icon={Flame} items={liveItems} cardProps={cardProps} />
+              <MediaRow title="Starting Soon" icon={Clock} items={soonItems} getBadge={getCountdownBadge} cardProps={cardProps} />
+              <MediaRow title="Airing Today" icon={Calendar} items={airingItems} getBadge={getAiringBadge} cardProps={cardProps} />
+              <MediaRow title="Trending Anime" icon={Sparkles} items={trendingAnimeItems} getProgress={getProgress} cardProps={cardProps} />
+              <MediaRow title="24/7 Live Channels" icon={Tv} items={channelItems} cardProps={cardProps} />
+              <MediaRow title="Top Rated" icon={Star} items={topRatedItems} getProgress={getProgress} cardProps={cardProps} />
+              <MediaRow title="Movies" icon={Film} items={movieItems} getProgress={getProgress} cardProps={cardProps} />
+              <MediaRow title="TV Shows & Live News" icon={Clapperboard} items={showItems} getProgress={getProgress} cardProps={cardProps} />
+              <MediaRow title="Because You Pinned…" icon={Heart} items={becauseItems} cardProps={cardProps} />
+              <MediaRow title="All Sports & Matchups" icon={Trophy} items={sportsItems} getBadge={(ev) => (ev.isUpcoming ? getCountdownBadge(ev) : undefined)} cardProps={cardProps} />
+            </>
+          ) : (
+            <section className="px-4 sm:px-8 pt-2 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-[#E50914]" />
+                  {searchQuery.trim()
+                    ? `Results for “${searchQuery.trim()}”`
+                    : menuItems.find((m) => m.id === activeTab)?.label || activeTab}{' '}
+                  <span className="text-sm text-gray-500">({visibleGridEvents.length})</span>
+                </h2>
+                {(activeTab === 'LIVE NOW' || SPORTS.has(activeTab)) && updatedLabel && !searchQuery.trim() && (
+                  <span className="text-xs text-gray-500">Scores auto-update · {updatedLabel}</span>
+                )}
+                {activeTab === 'History' && continueItems.length > 0 && (
+                  <button onClick={clearHistory} className="text-xs font-semibold text-gray-400 hover:text-white">
+                    Clear history
+                  </button>
+                )}
+              </div>
+
+              {visibleGridEvents.length === 0 ? (
+                searching ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4" aria-busy="true">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="h-[212px] rounded-lg bg-white/5 animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-[#18181b] border border-white/10 p-10 text-center text-sm text-gray-400">
+                    {activeTab === 'Pinned'
+                      ? 'Your list is empty. Tap + on any title to save it.'
+                      : activeTab === 'History'
+                        ? 'Nothing watched yet.'
+                        : searchQuery.trim()
+                          ? 'No matches. Try another spelling or the English title.'
+                          : 'Nothing here right now. Check back soon.'}
+                  </div>
+                )
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                  {visibleGridEvents.map((ev, idx) => (
+                    <MediaCard
+                      key={ev.id}
+                      ev={ev}
+                      index={idx}
+                      isSelected={cardProps.selectedId === ev.id}
+                      isPinned={pinnedIds.includes(ev.id)}
+                      onSelect={activeTab === 'History' && !searchQuery.trim() ? handleResume : handleSelect}
+                      onTogglePin={togglePin}
+                      onSelectSecondary={setSecondaryEvent}
+                      multiView={multiView}
+                      badge={
+                        activeTab === 'History'
+                          ? getContinueBadge(ev)
+                          : ev.isUpcoming
+                            ? getCountdownBadge(ev)
+                            : undefined
+                      }
+                      progress={getProgress(ev)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Dim overlay (click to exit) */}
+      {dimMode && playerOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/85 transition-opacity"
+          onClick={() => setDimMode(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ===== Mobile bottom nav ===== */}
       <nav
-        aria-label="Mobile Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-white/10 px-2 py-1 flex items-center justify-around"
+        aria-label="Mobile navigation"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-white/10 px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] flex items-center justify-around"
       >
         {[
           { id: 'Home', label: 'Home', icon: Grid },
           { id: 'LIVE NOW', label: 'Live', icon: Flame },
           { id: 'Shows', label: 'Shows', icon: Clapperboard },
           { id: 'Movies', label: 'Movies', icon: Film },
-          { id: 'Pinned', label: 'My List', icon: Check },
+          { id: 'Pinned', label: 'My List', icon: Heart },
         ].map((nav) => {
           const Icon = nav.icon;
           const active = activeTab === nav.id && !searchQuery.trim();
@@ -1135,45 +1183,74 @@ export default function ClientHomePage({ initialCatalog }) {
             <button
               key={nav.id}
               onClick={() => {
-                setActiveTab(nav.id);
-                setSearchQuery('');
+                selectTab(nav.id);
+                if (!playerOpen) window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
+              aria-current={active ? 'page' : undefined}
               className={`min-h-[48px] min-w-[56px] flex flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[11px] font-semibold transition ${
                 active ? 'text-[#E50914]' : 'text-gray-400 hover:text-white'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-5 h-5" />
               <span>{nav.label}</span>
             </button>
           );
         })}
       </nav>
 
+      {/* Toast */}
+      <div
+        role="status"
+        aria-live="polite"
+        className={`fixed left-1/2 -translate-x-1/2 bottom-20 lg:bottom-6 z-[60] max-w-[90vw] px-4 py-2.5 rounded-lg bg-white text-black text-xs font-bold shadow-2xl transition-all duration-300 ${
+          toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
+        }`}
+      >
+        {toast}
+      </div>
+
+      {detailsEvent && (
+        <DetailsModal
+          ev={detailsEvent}
+          resume={historyMap.get(detailsEvent.id)}
+          isPinned={pinnedIds.includes(detailsEvent.id)}
+          onTogglePin={togglePin}
+          onPlay={startPlayback}
+          onClose={closeDetails}
+          allowThirdParty={allowThirdParty}
+        />
+      )}
+
       {showCustomModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCustomModal(false)}>
           <form
             onSubmit={handleLoadCustomStream}
-            className="w-full max-w-md rounded-xl bg-[#181818] border border-white/15 p-6 space-y-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-xl bg-[#18181b] border border-white/15 p-6 space-y-4 shadow-2xl"
           >
-            <h3 className="text-base font-bold text-white">Add Custom Stream (M3U8 / MP4 / Embed)</h3>
-            <input
-              type="url"
-              required
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              placeholder="https://example.com/master.m3u8"
-              className="w-full bg-black/60 border border-white/20 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-[#E50914]"
-            />
+            <h3 className="text-base font-bold text-white">Add custom stream</h3>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-gray-300">Stream URL (M3U8, MP4, or embed page)</span>
+              <input
+                type="url"
+                required
+                autoFocus
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                placeholder="https://example.com/master.m3u8"
+                className="w-full bg-black/60 border border-white/20 rounded-md px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#E50914]"
+              />
+            </label>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowCustomModal(false)}
-                className="px-3.5 py-2 rounded-md bg-white/10 text-xs font-semibold text-gray-300"
+                className="min-h-[40px] px-4 py-2 rounded-md bg-white/10 text-xs font-semibold text-gray-300"
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-md bg-[#E50914] text-xs font-bold text-white">
-                Play Stream
+              <button type="submit" className="min-h-[40px] px-4 py-2 rounded-md bg-[#E50914] text-xs font-bold text-white">
+                Play stream
               </button>
             </div>
           </form>
