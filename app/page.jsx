@@ -1,7 +1,7 @@
 import { getCatalogData } from '../lib/catalog';
 import ClientHomePage from './ClientHomePage';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export default async function Page() {
   const initialCatalog = await getCatalogData();

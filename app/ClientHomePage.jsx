@@ -516,6 +516,9 @@ export default function ClientHomePage({ initialCatalog }) {
   };
 
   useEffect(() => {
+    if (initialEvents.length <= 20) {
+      fetchCatalog(false);
+    }
     const interval = setInterval(fetchCatalog, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -533,7 +536,7 @@ export default function ClientHomePage({ initialCatalog }) {
     );
   }, [events, searchQuery]);
 
-  const sportsCategories = new Set(['NFL', 'NBA', 'College', 'Soccer', 'MMA', 'Sports']);
+  const sportsCategories = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Sports']);
 
   const visibleGridEvents = useMemo(() => {
     if (activeTab === 'LIVE NOW') return searchedEvents.filter((e) => e.isLive);
@@ -821,7 +824,7 @@ export default function ClientHomePage({ initialCatalog }) {
       <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
         {/* Full Home Menu Quick-Launch Hub */}
         <section className="px-4 sm:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
             {[
               { id: 'LIVE NOW', label: 'Live Now', count: events.filter((e) => e.isLive).length },
               { id: 'Channels', label: '24/7 Live TV', count: events.filter((e) => e.category === 'Channels').length },
@@ -829,6 +832,8 @@ export default function ClientHomePage({ initialCatalog }) {
               { id: 'Shows', label: 'TV Shows', count: events.filter((e) => e.category === 'Shows').length },
               { id: 'NFL', label: 'NFL', count: events.filter((e) => e.category === 'NFL').length },
               { id: 'NBA', label: 'NBA', count: events.filter((e) => e.category === 'NBA').length },
+              { id: 'NHL', label: 'NHL', count: events.filter((e) => e.category === 'NHL').length },
+              { id: 'MLB', label: 'MLB', count: events.filter((e) => e.category === 'MLB').length },
               { id: 'College', label: 'College', count: events.filter((e) => e.category === 'College').length },
               { id: 'Soccer', label: 'Soccer', count: events.filter((e) => e.category === 'Soccer').length },
               { id: 'MMA', label: 'UFC / MMA', count: events.filter((e) => e.category === 'MMA').length },
