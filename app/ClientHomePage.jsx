@@ -46,16 +46,22 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
   const [status, setStatus] = useState('loading');
   const [resolution, setResolution] = useState('AUTO HD');
   const [retrySeed, setRetrySeed] = useState(0);
+  const [autoProxied, setAutoProxied] = useState(false);
 
   const isDirectMp4 = Boolean(stream?.url && /\.mp4(?:$|\?)/i.test(stream.url));
+  const effectiveProxy = (useProxy || autoProxied) && !isDirectMp4;
 
   const finalUrl = useMemo(() => {
     if (!stream?.url) return '';
-    if (useProxy && stream.type === 'hls') {
+    if (effectiveProxy && stream.type === 'hls') {
       return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
     }
     return stream.url;
-  }, [stream, useProxy]);
+  }, [stream, effectiveProxy]);
+
+  useEffect(() => {
+    setAutoProxied(false);
+  }, [stream?.url]);
 
   useEffect(() => {
     if (!stream || stream.type === 'embed') {
@@ -116,7 +122,13 @@ function StreamPlayer({ stream, title, subtitle, useProxy, isMuted, onToggleMute
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
+              if (!effectiveProxy) {
+                // Auto-fallback to /api/proxy if direct browser HLS hits CORS
+                setAutoProxied(true);
+              } else {
+                setStatus('error');
+                hls.destroy();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               hls.recoverMediaError();
@@ -428,7 +440,7 @@ export default function ClientHomePage({ initialCatalog }) {
   const [secondaryEvent, setSecondaryEvent] = useState(initialEvents[1] || initialEvents[0] || null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [serverIdx, setServerIdx] = useState(0);
-  const [useProxy, setUseProxy] = useState(true);
+  const [useProxy, setUseProxy] = useState(false);
   const [multiView, setMultiView] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -729,6 +741,16 @@ export default function ClientHomePage({ initialCatalog }) {
               ))}
             </div>
             <div className="flex items-center gap-2">
+              {activeServer?.url && (
+                <a
+                  href={activeServer.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-[#E50914] text-white transition"
+                >
+                  Open Source ↗
+                </a>
+              )}
               <button
                 onClick={() => setTheaterMode((t) => !t)}
                 className="px-3 py-1.5 rounded text-xs font-bold bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 transition"
@@ -797,6 +819,41 @@ export default function ClientHomePage({ initialCatalog }) {
 
       {/* Netflix Catalog Rows OR Filtered Grid */}
       <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
+        {/* Full Home Menu Quick-Launch Hub */}
+        <section className="px-4 sm:px-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {[
+              { id: 'LIVE NOW', label: 'Live Now', count: events.filter((e) => e.isLive).length },
+              { id: 'Channels', label: '24/7 Live TV', count: events.filter((e) => e.category === 'Channels').length },
+              { id: 'Movies', label: 'Movies', count: events.filter((e) => e.category === 'Movies').length },
+              { id: 'Shows', label: 'TV Shows', count: events.filter((e) => e.category === 'Shows').length },
+              { id: 'NFL', label: 'NFL', count: events.filter((e) => e.category === 'NFL').length },
+              { id: 'NBA', label: 'NBA', count: events.filter((e) => e.category === 'NBA').length },
+              { id: 'College', label: 'College', count: events.filter((e) => e.category === 'College').length },
+              { id: 'Soccer', label: 'Soccer', count: events.filter((e) => e.category === 'Soccer').length },
+              { id: 'MMA', label: 'UFC / MMA', count: events.filter((e) => e.category === 'MMA').length },
+              { id: 'Sports', label: 'All Sports', count: events.filter((e) => sportsCategories.has(e.category)).length },
+              { id: 'Pinned', label: 'My List', count: events.filter((e) => pinnedIds.includes(e.id)).length },
+              { id: 'Home', label: 'All Catalogs', count: events.length },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg border text-left transition-all duration-200 hover:scale-[1.02] ${
+                  activeTab === item.id
+                    ? 'bg-[#E50914] border-[#E50914] text-white shadow-lg shadow-[#E50914]/25'
+                    : 'bg-[#181818]/90 border-white/10 text-gray-200 hover:border-white/30 hover:bg-[#222]'
+                }`}
+              >
+                <span className="text-xs font-bold truncate">{item.label}</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-300">
+                  {item.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         {activeTab === 'Home' && !searchQuery.trim() ? (
           <>
             <NetflixRow
