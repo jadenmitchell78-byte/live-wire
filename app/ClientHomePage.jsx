@@ -39,6 +39,7 @@ import StreamPlayer from './components/StreamPlayer';
 import { MediaCard, MediaRow, SkeletonRow, formatCountdown, FALLBACK_IMG } from './components/MediaCard';
 import { EpisodeGrid } from './components/Episodes';
 import DetailsModal from './components/DetailsModal';
+import VipAccessGate, { useVipAccess } from './components/VipAccessGate';
 import { isOnDemand, isSeries, resolveServers } from '../lib/sources';
 
 const CharacterStage = dynamic(() => import('./components/CharacterStage'), {
@@ -107,6 +108,8 @@ export default function ClientHomePage({ initialCatalog }) {
   const [fitMode, setFitMode] = useState('contain');
   const [isMuted, setIsMuted] = useState(false);
   const [vipOddsOpen, setVipOddsOpen] = useState(false);
+  const [vipGateOpen, setVipGateOpen] = useState(false);
+  const vipAccess = useVipAccess();
   const [animeLangFilter, setAnimeLangFilter] = useState('all');
 
   const [pinned, setPinned] = useState([]);
@@ -762,6 +765,18 @@ export default function ClientHomePage({ initialCatalog }) {
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span className="text-[11px] sm:text-xs">VIP</span>
+            </button>
+            <button
+              onClick={() => setVipGateOpen(true)}
+              aria-label="AMG VIP Access Gate"
+              title={vipAccess.unlocked ? 'AMG VIP Unlocked' : 'Unlock AMG VIP Access'}
+              className={`h-9 sm:h-10 px-2.5 rounded-lg text-xs font-bold border flex items-center gap-1 transition ${
+                vipAccess.unlocked
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
+              }`}
+            >
+              <span className="text-[11px]">{vipAccess.unlocked ? 'VIP ON' : 'Pass'}</span>
             </button>
             <button
               onClick={() => setUseProxy((p) => !p)}
@@ -1455,6 +1470,19 @@ export default function ClientHomePage({ initialCatalog }) {
           </form>
         </div>
       )}
+      <VipAccessGate
+        open={vipGateOpen}
+        onClose={() => setVipGateOpen(false)}
+        unlocked={vipAccess.unlocked}
+        onUnlocked={(data) => {
+          vipAccess.unlockVip(data);
+          showToast('AMG VIP unlocked across Multi-View, Themes & Fast Pass');
+        }}
+        onLock={() => {
+          vipAccess.lockVip();
+          showToast('AMG VIP session locked');
+        }}
+      />
     </div>
   );
 }

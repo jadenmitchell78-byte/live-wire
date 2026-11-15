@@ -62,6 +62,10 @@ export default function StreamPlayer({
   const finalUrl = useMemo(() => {
     if (!stream?.url) return '';
     if (effectiveProxy && !String(stream.url).startsWith('/api/')) {
+      const externalBase = (process.env.NEXT_PUBLIC_HLS_PROXY_URL || '').trim().replace(/\/+$/, '');
+      if (externalBase) {
+        return `${externalBase}/?url=${encodeURIComponent(stream.url)}`;
+      }
       return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
     }
     return stream.url;
