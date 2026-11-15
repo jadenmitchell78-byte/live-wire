@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   AlertTriangle,
+  BookOpen,
+  Box,
   Calendar,
   Check,
   ChevronLeft,
@@ -38,9 +41,27 @@ import { EpisodeGrid } from './components/Episodes';
 import DetailsModal from './components/DetailsModal';
 import { isOnDemand, isSeries, resolveServers } from '../lib/sources';
 
+const CharacterStage = dynamic(() => import('./components/CharacterStage'), {
+  ssr: false,
+  loading: () => (
+    <div className="mx-4 sm:mx-8 my-6 h-[480px] rounded-2xl bg-[#090A0F] border border-white/10 animate-pulse flex items-center justify-center text-xs font-mono text-gray-400">
+      Initializing 3D Character Stage (Draco / KTX2 Pipeline)…
+    </div>
+  ),
+});
+
+const WebtoonReader = dynamic(() => import('./components/WebtoonReader'), {
+  ssr: false,
+  loading: () => (
+    <div className="mx-4 sm:mx-8 my-6 h-[480px] rounded-2xl bg-[#090A0F] border border-white/10 animate-pulse flex items-center justify-center text-xs font-mono text-gray-400">
+      Loading Vertical Continuous-Scroll Webtoon Engine…
+    </div>
+  ),
+});
+
 const SPORTS = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Tennis', 'Sports']);
 const TAB_IDS = new Set([
-  'Home', 'LIVE NOW', 'Channels', 'Anime', 'Shows', 'Movies', 'Sports', 'NFL', 'NBA', 'NHL', 'MLB',
+  'Home', 'LIVE NOW', 'Studio3D', 'Webtoons', 'Channels', 'Anime', 'Shows', 'Movies', 'Sports', 'NFL', 'NBA', 'NHL', 'MLB',
   'College', 'Soccer', 'MMA', 'Tennis', 'Pinned', 'History',
 ]);
 const FIT_ORDER = ['contain', 'cover', 'zoom'];
@@ -85,6 +106,8 @@ export default function ClientHomePage({ initialCatalog }) {
   const [dimMode, setDimMode] = useState(false);
   const [fitMode, setFitMode] = useState('contain');
   const [isMuted, setIsMuted] = useState(false);
+  const [vipOddsOpen, setVipOddsOpen] = useState(false);
+  const [animeLangFilter, setAnimeLangFilter] = useState('all');
 
   const [pinned, setPinned] = useState([]);
   const [history, setHistory] = useState([]);
@@ -380,15 +403,45 @@ export default function ClientHomePage({ initialCatalog }) {
     saveJson('livewire_history', []);
   };
 
+  const toggleMultiView = useCallback(() => {
+    setMultiView((prev) => {
+      const next = !prev;
+      if (next) {
+        const candidates = eventsRef.current.filter(
+          (e) => e.isLive || SPORTS.has(e.category) || e.category === 'Channels',
+        );
+        if (!selectedRef.current && candidates[0]) {
+          startPlayback(candidates[0], 1, 1);
+        }
+        if (!secondaryEvent) {
+          const primaryId = selectedRef.current?.id || candidates[0]?.id;
+          const fallbackSecond =
+            candidates.find((e) => e.id !== primaryId) ||
+            eventsRef.current.find((e) => e.id !== primaryId) ||
+            candidates[0];
+          if (fallbackSecond) setSecondaryEvent(fallbackSecond);
+        }
+        showToast('Multi-View ON: Pick Screen #2 below the player or tap #2 on any card');
+      } else {
+        showToast('Multi-View OFF');
+      }
+      return next;
+    });
+  }, [secondaryEvent, startPlayback, showToast]);
+
   // ---------- Servers ----------
   const resolvedServers = useMemo(
     () => resolveServers(selectedEvent, activeSeason, activeEpisode),
     [selectedEvent, activeSeason, activeEpisode],
   );
-  const visibleServers = useMemo(
-    () => (allowThirdParty ? resolvedServers : resolvedServers.filter((s) => !s.thirdParty)),
-    [resolvedServers, allowThirdParty],
-  );
+  const visibleServers = useMemo(() => {
+    const base = allowThirdParty ? resolvedServers : resolvedServers.filter((s) => !s.thirdParty);
+    if (selectedEvent?.mediaType !== 'anime' || animeLangFilter === 'all') return base;
+    const filtered = base.filter((s) =>
+      animeLangFilter === 'dub' ? /dub/i.test(s.name) : /sub|mal/i.test(s.name),
+    );
+    return filtered.length > 0 ? filtered : base;
+  }, [resolvedServers, allowThirdParty, selectedEvent?.mediaType, animeLangFilter]);
   const hiddenCount = resolvedServers.length - visibleServers.length;
   const safeIdx = Math.min(serverIdx, Math.max(visibleServers.length - 1, 0));
   const activeServer = visibleServers[safeIdx];
@@ -533,13 +586,16 @@ export default function ClientHomePage({ initialCatalog }) {
     () => [
       { id: 'Home', label: 'Home', icon: Grid, count: events.length },
       { id: 'LIVE NOW', label: 'Live Now (Streamed.pk)', icon: Flame, count: liveItems.length },
-      { id: 'History', label: 'Continue Watching', icon: History, count: continueItems.length },
+      { id: 'NBA', label: 'NBA Live Plugin', icon: Trophy, count: events.filter((e) => e.category === 'NBA').length },
+      { id: 'Studio3D', label: '3D Character Stage', icon: Box, count: 3 },
+      { id: 'Webtoons', label: 'Webtoon Studio', icon: BookOpen, count: 3 },
       { id: 'Anime', label: 'Anime (Sub & Dub)', icon: Sparkles, count: animeItems.length },
       { id: 'Channels', label: '24/7 Live TV', icon: Tv, count: channelItems.length },
       { id: 'Shows', label: 'TV Series', icon: Clapperboard, count: showItems.length },
       { id: 'Movies', label: 'Movies', icon: Film, count: movieItems.length },
+      { id: 'History', label: 'Continue Watching', icon: History, count: continueItems.length },
       { id: 'Sports', label: 'All Sports', icon: Trophy, count: sportsItems.length },
-      ...['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Tennis'].map((c) => ({
+      ...['NFL', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Tennis'].map((c) => ({
         id: c,
         label: c === 'MMA' ? 'UFC / MMA' : c === 'Tennis' ? 'ATP / WTA Tennis' : c,
         icon: Radio,
@@ -631,12 +687,12 @@ export default function ClientHomePage({ initialCatalog }) {
   const isEmptyCatalog = events.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#0c0c0e] text-white overflow-x-hidden pb-24 lg:pb-14">
+    <div className="min-h-screen bg-[#090A0F] text-white overflow-x-hidden pb-24 lg:pb-14">
       {/* ===== Header ===== */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${
           scrolled || playerOpen
-            ? 'bg-[#0c0c0e]/95 backdrop-blur-xl border-b border-white/10'
+            ? 'bg-[#090A0F]/95 backdrop-blur-xl border-b border-white/10'
             : 'bg-gradient-to-b from-black/95 via-black/60 to-transparent'
         }`}
       >
@@ -678,13 +734,55 @@ export default function ClientHomePage({ initialCatalog }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={toggleMultiView}
+              aria-pressed={multiView}
+              aria-label="Toggle multi-view split screen"
+              title="Split-Screen Multi-View"
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition ${
+                multiView
+                  ? 'bg-[#E50914] border-[#E50914] text-white shadow-lg shadow-[#E50914]/30'
+                  : 'bg-white/10 border-white/15 text-gray-200 hover:text-white'
+              }`}
+            >
+              <Grid className="w-4 h-4 shrink-0" />
+              <span className="text-[11px] sm:text-xs">Multi</span>
+            </button>
+            <button
+              onClick={() => setVipOddsOpen((v) => !v)}
+              aria-pressed={vipOddsOpen}
+              aria-label="Toggle AMG VIP AI Odds"
+              title="AMG VIP Live Markov & Monte Carlo Edges"
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold border flex items-center gap-1 transition ${
+                vipOddsOpen
+                  ? 'bg-amber-500 text-black border-amber-400'
+                  : 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[11px] sm:text-xs">VIP</span>
+            </button>
+            <button
+              onClick={() => setUseProxy((p) => !p)}
+              aria-pressed={useProxy}
+              aria-label="Toggle HLS proxy"
+              title="HLS CORS Proxy"
+              className={`h-9 sm:h-10 px-2 sm:px-3 rounded-lg text-xs font-bold border flex items-center gap-1 transition ${
+                useProxy
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
+              }`}
+            >
+              <Shield className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">Proxy</span>
+            </button>
             <button
               onClick={toggleThirdParty}
               aria-pressed={allowThirdParty}
               aria-label="Toggle third-party sources"
-              title="Third-party embed sources (unlicensed)"
-              className={`h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition ${
+              title="Third-party embed sources"
+              className={`hidden sm:flex h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
                 allowThirdParty
                   ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                   : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
@@ -692,35 +790,13 @@ export default function ClientHomePage({ initialCatalog }) {
             >
               <ShieldAlert className="w-4 h-4" />
               <span className="hidden md:inline">3rd-party</span>
-              <span className="hidden sm:inline">{allowThirdParty ? 'ON' : 'OFF'}</span>
-            </button>
-            <button
-              onClick={() => setUseProxy((p) => !p)}
-              aria-pressed={useProxy}
-              aria-label="Toggle HLS proxy"
-              className={`hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
-                useProxy
-                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                  : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span className="hidden md:inline">Proxy</span> {useProxy ? 'ON' : 'OFF'}
-            </button>
-            <button
-              onClick={() => setMultiView((m) => !m)}
-              aria-pressed={multiView}
-              aria-label="Toggle multi-view"
-              className={`hidden md:flex h-10 px-3 rounded-lg text-xs font-bold border items-center gap-1.5 transition ${
-                multiView ? 'bg-[#E50914] border-[#E50914] text-white' : 'bg-white/10 border-white/15 text-gray-300 hover:text-white'
-              }`}
-            >
-              <Grid className="w-4 h-4" /> Multi
+              <span>{allowThirdParty ? 'ON' : 'OFF'}</span>
             </button>
             <button
               onClick={() => setShowCustomModal(true)}
               aria-label="Add custom stream"
-              className="hidden sm:flex h-10 px-3 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white items-center gap-1.5 transition"
+              title="Play custom M3U8/MP4/Embed URL"
+              className="h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center justify-center gap-1.5 transition"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden md:inline">Add</span>
@@ -729,7 +805,7 @@ export default function ClientHomePage({ initialCatalog }) {
               onClick={() => fetchCatalog(true)}
               aria-label="Rotate catalog"
               title="Rotate new movies & shows"
-              className="h-10 w-10 sm:w-auto sm:px-3 rounded-lg bg-white/10 hover:bg-[#E50914] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"
+              className="h-9 w-9 sm:h-10 sm:w-auto sm:px-3 rounded-lg bg-white/10 hover:bg-[#E50914] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden md:inline">Rotate</span>
@@ -782,7 +858,7 @@ export default function ClientHomePage({ initialCatalog }) {
           <section
             className={`relative ${dimMode ? 'z-[35]' : ''} pt-20 px-3 sm:px-6 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-6xl'} space-y-3`}
           >
-            <div className={`grid gap-4 ${multiView ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-3 sm:gap-4 ${multiView ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
               {activeServer ? (
                 <StreamPlayer
                   key={activeServer.url}
@@ -819,7 +895,7 @@ export default function ClientHomePage({ initialCatalog }) {
                 <StreamPlayer
                   key={`second-${secondaryStream.url}`}
                   stream={secondaryStream}
-                  title={secondaryEvent.shortTitle || secondaryEvent.title}
+                  title={`#2 · ${secondaryEvent.shortTitle || secondaryEvent.title}`}
                   subtitle={secondaryStream.name}
                   useProxy={useProxy}
                   isMuted
@@ -827,6 +903,47 @@ export default function ClientHomePage({ initialCatalog }) {
                 />
               )}
             </div>
+
+            {multiView && (
+              <div className="rounded-xl bg-[#141416] border border-[#E50914]/40 p-2.5 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#E50914] flex items-center gap-1.5">
+                    <Grid className="w-3.5 h-3.5" /> Split-Screen #2 Picker
+                  </span>
+                  {secondaryEvent && (
+                    <button
+                      onClick={() => {
+                        const first = selectedEvent;
+                        setSelectedEvent(secondaryEvent);
+                        setSecondaryEvent(first);
+                        setServerIdx(0);
+                      }}
+                      className="px-2.5 py-1 rounded bg-white/10 hover:bg-[#E50914] text-[11px] font-bold text-white transition"
+                    >
+                      Swap #1 ↔ #2
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {events
+                    .filter((e) => e.id !== selectedEvent.id && (e.isLive || e.category === 'Channels' || SPORTS.has(e.category)))
+                    .slice(0, 14)
+                    .map((ev) => (
+                      <button
+                        key={`pick2-${ev.id}`}
+                        onClick={() => setSecondaryEvent(ev)}
+                        className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition ${
+                          secondaryEvent?.id === ev.id
+                            ? 'bg-[#E50914] border-[#E50914] text-white'
+                            : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/15'
+                        }`}
+                      >
+                        {ev.shortTitle || ev.title}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <div className="rounded-xl bg-[#141416] border border-white/10 p-3 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -886,9 +1003,20 @@ export default function ClientHomePage({ initialCatalog }) {
                     <Moon className="w-3.5 h-3.5" /> Dim
                   </button>
                   <button
+                    onClick={toggleMultiView}
+                    aria-pressed={multiView}
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                      multiView ? 'bg-[#E50914] text-white' : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    <Grid className="w-3.5 h-3.5" /> {multiView ? 'Multi ON' : 'Multi'}
+                  </button>
+                  <button
                     onClick={() => setTheaterMode((t) => !t)}
                     aria-pressed={theaterMode}
-                    className="hidden sm:flex min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white items-center gap-1.5 transition"
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                      theaterMode ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
                   >
                     <Maximize2 className="w-3.5 h-3.5" /> Theater
                   </button>
@@ -905,6 +1033,24 @@ export default function ClientHomePage({ initialCatalog }) {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {selectedEvent?.mediaType === 'anime' && (
+                  <div className="flex items-center rounded-lg bg-black/60 border border-white/15 p-0.5 mr-1">
+                    {['all', 'sub', 'dub'].map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => {
+                          setAnimeLangFilter(lang);
+                          setServerIdx(0);
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold uppercase transition ${
+                          animeLangFilter === lang ? 'bg-amber-400 text-black' : 'text-gray-300 hover:text-white'
+                        }`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {visibleServers.map((srv, idx) => (
                   <button
                     key={`${srv.url}-${idx}`}
@@ -1035,6 +1181,42 @@ export default function ClientHomePage({ initialCatalog }) {
 
         {/* ===== Catalog ===== */}
         <div className={playerOpen ? 'mt-8 space-y-8' : '-mt-6 relative z-20 space-y-8'}>
+          {vipOddsOpen && (
+            <section className="px-4 sm:px-8 pt-4">
+              <div className="rounded-xl bg-gradient-to-r from-[#1a1508] via-[#141416] to-[#1a0d10] border border-amber-500/40 p-4 space-y-3 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" /> AMG VIP · Live Slip-Maker AI & Markov Edges
+                  </span>
+                  <button onClick={() => setVipOddsOpen(false)} className="text-xs font-bold text-gray-400 hover:text-white">
+                    Hide
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                  <div className="rounded-lg bg-black/60 border border-white/10 p-3 space-y-1">
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase">ATP Markov · Quarter-Kelly 3x</p>
+                    <p className="font-extrabold text-white">Sinner vs Alcaraz (Hard)</p>
+                    <p className="text-gray-300">Model: <b>55.1%</b> · Total Games: <b>25.9</b> · Aces: <b>8.0 / 6.2</b></p>
+                  </div>
+                  <div className="rounded-lg bg-black/60 border border-white/10 p-3 space-y-1">
+                    <p className="text-[10px] font-bold text-amber-300 uppercase">Break-of-Serve Mean Reversion</p>
+                    <p className="font-extrabold text-white">Sabalenka vs Swiatek (WTA)</p>
+                    <p className="text-gray-300">Live Recovery: <b>58.4%</b> · Entry Cap: <b>≤52¢ (0¢ Maker)</b></p>
+                  </div>
+                  <div className="rounded-lg bg-black/60 border border-white/10 p-3 space-y-1">
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Kalshi KXBTC15M · 100% Cluster WR</p>
+                    <p className="font-extrabold text-white">Maker Spread Harvest ≤52¢</p>
+                    <p className="text-gray-300">Auto-Scalp Lock: <b>80¢ Bid</b> · Hard Cap: <b>55¢ Max</b></p>
+                  </div>
+                  <div className="rounded-lg bg-black/60 border border-white/10 p-3 space-y-1">
+                    <p className="text-[10px] font-bold text-purple-300 uppercase">Paper Crucible Gate Progress</p>
+                    <p className="font-extrabold text-white">206 / 500 Verified Trades</p>
+                    <p className="text-gray-300">Win Rate: <b>77.2%</b> · Net PnL: <b>+$478.85</b></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
           {/* Mobile/tablet category strip */}
           <section className="lg:hidden px-4 sm:px-8">
             <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
@@ -1044,7 +1226,7 @@ export default function ClientHomePage({ initialCatalog }) {
                   <button
                     key={item.id}
                     onClick={() => selectTab(item.id)}
-                    className={`min-h-[40px] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-bold transition ${
+                    className={`min-h-[44px] shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-bold transition ${
                       active ? 'bg-[#E50914] border-[#E50914] text-white' : 'bg-[#18181b] border-white/10 text-gray-300 hover:border-white/30'
                     }`}
                   >
@@ -1056,7 +1238,11 @@ export default function ClientHomePage({ initialCatalog }) {
             </div>
           </section>
 
-          {isEmptyCatalog ? (
+          {activeTab === 'Studio3D' && !searchQuery.trim() ? (
+            <CharacterStage />
+          ) : activeTab === 'Webtoons' && !searchQuery.trim() ? (
+            <WebtoonReader />
+          ) : isEmptyCatalog ? (
             <>
               <SkeletonRow />
               <SkeletonRow />
@@ -1184,11 +1370,11 @@ export default function ClientHomePage({ initialCatalog }) {
       >
         {[
           { id: 'Home', label: 'Home', icon: Grid },
-          { id: 'LIVE NOW', label: 'Live', icon: Flame },
+          { id: 'NBA', label: 'NBA', icon: Trophy },
+          { id: 'Studio3D', label: '3D Stage', icon: Box },
+          { id: 'Webtoons', label: 'Webtoons', icon: BookOpen },
           { id: 'Anime', label: 'Anime', icon: Sparkles },
           { id: 'Shows', label: 'Shows', icon: Clapperboard },
-          { id: 'Movies', label: 'Movies', icon: Film },
-          { id: 'Pinned', label: 'My List', icon: Heart },
         ].map((nav) => {
           const Icon = nav.icon;
           const active = activeTab === nav.id && !searchQuery.trim();
