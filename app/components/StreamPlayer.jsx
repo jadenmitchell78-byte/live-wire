@@ -50,7 +50,7 @@ export default function StreamPlayer({
   const [retrySeed, setRetrySeed] = useState(0);
   const [autoProxied, setAutoProxied] = useState(false);
   const [hudVisible, setHudVisible] = useState(true);
-  const [adShield, setAdShield] = useState(true);
+  const [adShield, setAdShield] = useState(false);
 
   const isEmbed = stream?.type === 'embed';
   const isDirectMp4 = Boolean(
@@ -311,7 +311,7 @@ export default function StreamPlayer({
           }`}
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
-          referrerPolicy="origin"
+          referrerPolicy="no-referrer-when-downgrade"
         />
       ) : (
         <video
