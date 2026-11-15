@@ -9,7 +9,9 @@ export function useEpisodes(ev) {
     ? `tvmaze:${ev.tvmazeId}`
     : ev?.mediaType === 'anime' && ev.aniId
       ? `anilist:${ev.aniId}`
-      : null;
+      : ev?.mediaType === 'anime' && ev.malId
+        ? `jikan:${ev.malId}`
+        : null;
   const [state, setState] = useState(() => ({
     loading: Boolean(key && !episodeCache.has(key)),
     episodes: key ? episodeCache.get(key) || [] : [],

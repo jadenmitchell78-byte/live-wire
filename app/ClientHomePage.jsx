@@ -38,10 +38,10 @@ import { EpisodeGrid } from './components/Episodes';
 import DetailsModal from './components/DetailsModal';
 import { isOnDemand, isSeries, resolveServers } from '../lib/sources';
 
-const SPORTS = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Sports']);
+const SPORTS = new Set(['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Tennis', 'Sports']);
 const TAB_IDS = new Set([
-  'Home', 'LIVE NOW', 'Channels', 'Shows', 'Movies', 'Sports', 'NFL', 'NBA', 'NHL', 'MLB',
-  'College', 'Soccer', 'MMA', 'Pinned', 'History',
+  'Home', 'LIVE NOW', 'Channels', 'Anime', 'Shows', 'Movies', 'Sports', 'NFL', 'NBA', 'NHL', 'MLB',
+  'College', 'Soccer', 'MMA', 'Tennis', 'Pinned', 'History',
 ]);
 const FIT_ORDER = ['contain', 'cover', 'zoom'];
 const FIT_LABEL = { contain: 'Fit', cover: 'Fill', zoom: 'Zoom' };
@@ -475,6 +475,10 @@ export default function ClientHomePage({ initialCatalog }) {
   const topRatedItems = useMemo(() => byIds(rows.topRated), [byIds, rows]);
   const channelItems = useMemo(() => events.filter((e) => e.category === 'Channels'), [events]);
   const movieItems = useMemo(() => events.filter((e) => e.category === 'Movies'), [events]);
+  const animeItems = useMemo(
+    () => events.filter((e) => e.category === 'Anime' || e.mediaType === 'anime'),
+    [events],
+  );
   const showItems = useMemo(
     () => events.filter((e) => e.category === 'Shows' && e.mediaType !== 'anime'),
     [events],
@@ -512,6 +516,8 @@ export default function ClientHomePage({ initialCatalog }) {
     switch (activeTab) {
       case 'LIVE NOW':
         return liveItems;
+      case 'Anime':
+        return animeItems;
       case 'Sports':
         return sportsItems;
       case 'Pinned':
@@ -521,26 +527,27 @@ export default function ClientHomePage({ initialCatalog }) {
       default:
         return events.filter((e) => e.category === activeTab);
     }
-  }, [searchQuery, searchedEvents, activeTab, liveItems, sportsItems, pinnedItems, continueItems, events]);
+  }, [searchQuery, searchedEvents, activeTab, liveItems, animeItems, sportsItems, pinnedItems, continueItems, events]);
 
   const menuItems = useMemo(
     () => [
       { id: 'Home', label: 'Home', icon: Grid, count: events.length },
-      { id: 'LIVE NOW', label: 'Live Now', icon: Flame, count: liveItems.length },
+      { id: 'LIVE NOW', label: 'Live Now (Streamed.pk)', icon: Flame, count: liveItems.length },
       { id: 'History', label: 'Continue Watching', icon: History, count: continueItems.length },
+      { id: 'Anime', label: 'Anime (Sub & Dub)', icon: Sparkles, count: animeItems.length },
       { id: 'Channels', label: '24/7 Live TV', icon: Tv, count: channelItems.length },
-      { id: 'Shows', label: 'Shows & Anime', icon: Clapperboard, count: events.filter((e) => e.category === 'Shows').length },
+      { id: 'Shows', label: 'TV Series', icon: Clapperboard, count: showItems.length },
       { id: 'Movies', label: 'Movies', icon: Film, count: movieItems.length },
       { id: 'Sports', label: 'All Sports', icon: Trophy, count: sportsItems.length },
-      ...['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA'].map((c) => ({
+      ...['NFL', 'NBA', 'NHL', 'MLB', 'College', 'Soccer', 'MMA', 'Tennis'].map((c) => ({
         id: c,
-        label: c === 'MMA' ? 'UFC / MMA' : c,
+        label: c === 'MMA' ? 'UFC / MMA' : c === 'Tennis' ? 'ATP / WTA Tennis' : c,
         icon: Radio,
         count: events.filter((e) => e.category === c).length,
       })),
       { id: 'Pinned', label: 'My List', icon: Heart, count: pinned.length },
     ],
-    [events, liveItems, continueItems, channelItems, movieItems, sportsItems, pinned],
+    [events, liveItems, continueItems, animeItems, channelItems, showItems, movieItems, sportsItems, pinned],
   );
 
   const heroEvent = useMemo(
@@ -639,10 +646,15 @@ export default function ClientHomePage({ initialCatalog }) {
               selectTab('Home');
               setPlayerOpen(false);
             }}
-            aria-label="Live Wire home"
-            className="text-lg sm:text-2xl font-black tracking-tighter text-[#E50914] shrink-0 rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E50914]"
+            aria-label="AMG VIP Live Wire home"
+            className="flex items-center gap-2 shrink-0 rounded px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E50914]"
           >
-            LIVE WIRE
+            <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-yellow-600 text-black text-[10px] sm:text-xs font-black tracking-wider uppercase shadow">
+              AMG VIP
+            </span>
+            <span className="text-lg sm:text-2xl font-black tracking-tighter text-[#E50914]">
+              LIVE WIRE
+            </span>
           </button>
 
           <div className="flex-1 max-w-md">
@@ -1173,6 +1185,7 @@ export default function ClientHomePage({ initialCatalog }) {
         {[
           { id: 'Home', label: 'Home', icon: Grid },
           { id: 'LIVE NOW', label: 'Live', icon: Flame },
+          { id: 'Anime', label: 'Anime', icon: Sparkles },
           { id: 'Shows', label: 'Shows', icon: Clapperboard },
           { id: 'Movies', label: 'Movies', icon: Film },
           { id: 'Pinned', label: 'My List', icon: Heart },

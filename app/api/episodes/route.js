@@ -77,6 +77,22 @@ export async function GET(request) {
       }));
       return respond(episodes);
     }
+
+    if (source === 'jikan') {
+      const res = await fetch(`https://api.jikan.moe/v4/anime/${id}/episodes`, {
+        signal: AbortSignal.timeout(5000),
+        next: { revalidate: 3600 },
+      });
+      const json = res.ok ? await res.json() : null;
+      const list = Array.isArray(json?.data) ? json.data : [];
+      const episodes = list.map((ep, i) => ({
+        season: 1,
+        number: Number(ep.mal_id) || i + 1,
+        name: ep.title || `Episode ${i + 1}`,
+        image: '',
+      }));
+      return respond(episodes);
+    }
   } catch {
     return respond([]);
   }

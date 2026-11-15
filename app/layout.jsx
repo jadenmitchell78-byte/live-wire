@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'LIVE WIRE // Sports & Media Hub',
-  description: 'Low-latency live sports scoreboard, multi-view player, and 24/7 channel hub.'
+  title: 'AMG VIP // LIVE WIRE — Sports, Anime & OTT Hub',
+  description: 'AMG VIP Live Wire: Streamed.pk live sports, Sub/Dub Anime, ATP/WTA Tennis, multi-view player, and 24/7 channels.'
 };
 
 export default function RootLayout({ children }) {
