@@ -50,9 +50,13 @@ export default function StreamPlayer({
   const [retrySeed, setRetrySeed] = useState(0);
   const [autoProxied, setAutoProxied] = useState(false);
   const [hudVisible, setHudVisible] = useState(true);
+  const [adShield, setAdShield] = useState(true);
 
   const isEmbed = stream?.type === 'embed';
-  const isDirectMp4 = Boolean(stream?.url && /\.mp4(?:$|\?)/i.test(stream.url));
+  const isDirectMp4 = Boolean(
+    stream?.type === 'mp4' ||
+      (stream?.url && (/\.mp4(?:$|\?)/i.test(stream.url) || String(stream.url).startsWith('/api/archive-stream'))),
+  );
   const effectiveProxy = (useProxy || autoProxied) && !isDirectMp4 && !isEmbed;
 
   const finalUrl = useMemo(() => {
@@ -230,7 +234,25 @@ export default function StreamPlayer({
           </span>
           {subtitle && <span className="text-xs text-gray-400 hidden sm:inline truncate">• {subtitle}</span>}
         </div>
-        {!isEmbed && (
+        {isEmbed ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAdShield((s) => !s);
+              setRetrySeed((r) => r + 1);
+            }}
+            className={`pointer-events-auto flex items-center gap-1.5 backdrop-blur-md px-2.5 py-1 rounded-md border text-[11px] font-bold transition ${
+              adShield
+                ? 'bg-emerald-950/85 border-emerald-500/50 text-emerald-300'
+                : 'bg-amber-950/85 border-amber-500/50 text-amber-300'
+            }`}
+            title="Ad-Shield Strict Sandbox blocks all pop-ups & redirects. Switch to Compat if an embed player refuses sandbox."
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {adShield ? 'Ad-Shield: STRICT (No Pop-Ups)' : 'Ad-Shield: COMPAT'}
+          </button>
+        ) : (
           <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[11px] font-mono text-emerald-400">
             <CheckCircle2 className="w-3.5 h-3.5" />
             {resolution}
@@ -279,15 +301,17 @@ export default function StreamPlayer({
 
       {isEmbed ? (
         <iframe
+          key={`${stream.url}-${adShield ? 'strict' : 'compat'}-${retrySeed}`}
           src={stream.url}
           title={title || 'Stream'}
           onLoad={() => setStatus('playing')}
+          sandbox={adShield ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
           className={`w-full h-full border-0 bg-black transition-transform duration-300 origin-center ${
             fitMode === 'zoom' ? 'scale-125' : ''
           }`}
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
-          referrerPolicy="no-referrer"
+          referrerPolicy="origin"
         />
       ) : (
         <video
