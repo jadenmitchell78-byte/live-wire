@@ -57,11 +57,13 @@ export default function StreamPlayer({
     stream?.type === 'mp4' ||
       (stream?.url && (/\.mp4(?:$|\?)/i.test(stream.url) || String(stream.url).startsWith('/api/archive-stream'))),
   );
-  const effectiveProxy = (useProxy || autoProxied) && !isDirectMp4 && !isEmbed;
+  const effectiveProxy = (useProxy || autoProxied) && !isEmbed;
 
   const finalUrl = useMemo(() => {
     if (!stream?.url) return '';
-    if (effectiveProxy) return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
+    if (effectiveProxy && !String(stream.url).startsWith('/api/')) {
+      return `/api/proxy?url=${encodeURIComponent(stream.url)}`;
+    }
     return stream.url;
   }, [stream, effectiveProxy]);
 
@@ -83,18 +85,25 @@ export default function StreamPlayer({
     return () => clearTimeout(hudTimer.current);
   }, []);
 
-  // Stall watchdog: still loading after STALL_MS -> try proxy once (HLS), else report failure
+  // Stall watchdog: still loading after STALL_MS -> try proxy once (HLS/MP4), else report failure
   useEffect(() => {
     if (status !== 'loading') return undefined;
+    if (isEmbed) {
+      // Some cross-origin embed iframes never fire onLoad smoothly; clear spinner after 2.5s so user can click play inside iframe
+      const embedTimer = setTimeout(() => {
+        setStatus((prev) => (prev === 'loading' ? 'playing' : prev));
+      }, 2500);
+      return () => clearTimeout(embedTimer);
+    }
     const t = setTimeout(() => {
-      if (!isEmbed && !isDirectMp4 && !effectiveProxy) {
+      if (!effectiveProxy && !String(stream?.url || '').startsWith('/api/')) {
         setAutoProxied(true);
       } else {
         fail('timeout');
       }
     }, STALL_MS);
     return () => clearTimeout(t);
-  }, [status, finalUrl, retrySeed]);
+  }, [status, finalUrl, retrySeed, isEmbed, effectiveProxy, stream?.url]);
 
   useEffect(() => {
     failedRef.current = false;
@@ -311,7 +320,7 @@ export default function StreamPlayer({
           }`}
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
+          referrerPolicy="no-referrer"
         />
       ) : (
         <video

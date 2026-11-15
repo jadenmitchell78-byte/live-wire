@@ -3,40 +3,44 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const STREAMED_MIRRORS = ['https://streamed.pk', 'https://streamed.su'];
+const PPV_API_URLS = ['https://ppv.st/api/streams', 'https://ppv.to/api/streams', 'https://ppv.land/api/streams'];
 
 const BROWSER_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
   Accept: 'application/json, text/plain, */*',
-  Referer: 'https://streamed.pk/',
 };
 
-// Live 24/7 Sports Network Fallbacks when a game hasn't tipped off yet
+// Active 2026 DLHD / Sports Network Fallbacks (thedaddy.li, dlhd.dad, thedaddy.pk)
 const SPORT_NETWORK_FALLBACKS = {
   basketball: [
-    'https://thedaddy.to/embed/stream-46.php', // NBA TV HD
-    'https://thedaddy.to/embed/stream-45.php', // TNT HD
-    'https://thedaddy.to/embed/stream-44.php', // ESPN HD
+    'https://thedaddy.li/stream/stream-46.php', // NBA TV HD
+    'https://thedaddy.li/stream/stream-45.php', // TNT HD
+    'https://thedaddy.li/stream/stream-44.php', // ESPN HD
+    'https://dlhd.dad/stream/stream-46.php', // NBA TV Mirror
+    'https://thedaddy.pk/watch/stream-45.php', // TNT Mirror
   ],
   'american-football': [
-    'https://thedaddy.to/embed/stream-66.php', // NFL Network / RedZone
-    'https://thedaddy.to/embed/stream-44.php', // ESPN HD
+    'https://thedaddy.li/stream/stream-66.php', // NFL Network / RedZone
+    'https://thedaddy.li/stream/stream-44.php', // ESPN HD
+    'https://dlhd.dad/stream/stream-66.php', // NFL Mirror
   ],
   football: [
-    'https://thedaddy.to/embed/stream-38.php', // Sky Sports Premier League
-    'https://thedaddy.to/embed/stream-31.php', // TNT Sports 1 UCL
+    'https://thedaddy.li/stream/stream-38.php', // Sky Sports Premier League
+    'https://thedaddy.li/stream/stream-31.php', // TNT Sports 1 UCL
+    'https://dlhd.dad/stream/stream-38.php',
   ],
   hockey: [
-    'https://thedaddy.to/embed/stream-65.php', // NHL Network
-    'https://thedaddy.to/embed/stream-44.php', // ESPN
+    'https://thedaddy.li/stream/stream-65.php', // NHL Network
+    'https://thedaddy.li/stream/stream-44.php', // ESPN
   ],
   fight: [
-    'https://thedaddy.to/embed/stream-31.php', // TNT Sports UFC
-    'https://thedaddy.to/embed/stream-44.php', // ESPN+
+    'https://thedaddy.li/stream/stream-31.php', // TNT Sports UFC
+    'https://thedaddy.li/stream/stream-44.php', // ESPN+
   ],
   tennis: [
-    'https://thedaddy.to/embed/stream-71.php', // Tennis Channel HD
-    'https://thedaddy.to/embed/stream-44.php', // ESPN
+    'https://thedaddy.li/stream/stream-71.php', // Tennis Channel HD
+    'https://thedaddy.li/stream/stream-44.php', // ESPN
   ],
 };
 
@@ -79,7 +83,54 @@ function teamTokens(name = '') {
   return parts.length ? parts : [clean];
 }
 
+async function findPpvStream(sport, home, away) {
+  const homeToks = teamTokens(home);
+  const awayToks = teamTokens(away);
+  for (const apiUrl of PPV_API_URLS) {
+    try {
+      const res = await fetch(apiUrl, {
+        headers: BROWSER_HEADERS,
+        signal: AbortSignal.timeout(4000),
+        next: { revalidate: 30 },
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const categories = data?.streams || (Array.isArray(data) ? data : []);
+      const allStreams = [];
+      for (const cat of categories) {
+        if (Array.isArray(cat?.streams)) {
+          allStreams.push(...cat.streams);
+        } else if (cat?.iframe || cat?.uri_name) {
+          allStreams.push(cat);
+        }
+      }
+      if (!allStreams.length) continue;
+
+      const hit =
+        allStreams.find((s) => {
+          const hay = `${s.name || ''} ${s.tag || ''} ${s.category_name || ''}`.toLowerCase();
+          return homeToks.some((t) => t && hay.includes(t)) && awayToks.some((t) => t && hay.includes(t));
+        }) ||
+        allStreams.find((s) => {
+          const hay = `${s.name || ''} ${s.tag || ''} ${s.category_name || ''}`.toLowerCase();
+          return homeToks.some((t) => t && hay.includes(t)) || awayToks.some((t) => t && hay.includes(t));
+        });
+
+      if (hit?.iframe && String(hit.iframe).startsWith('http')) {
+        return hit.iframe;
+      }
+    } catch {
+      // try next PPV mirror
+    }
+  }
+  return null;
+}
+
 async function findMatchAndResolveStream(sport, home, away, feedIndex = 0) {
+  // 1. Check active PPV.st / PPV.to live event streams first
+  const ppvIframe = await findPpvStream(sport, home, away);
+  if (ppvIframe && feedIndex === 0) return ppvIframe;
+
   const endpoints = [
     `/api/matches/${encodeURIComponent(sport || 'basketball')}`,
     '/api/matches/live',
