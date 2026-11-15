@@ -53,11 +53,12 @@ export default function StreamPlayer({
   const [adShield, setAdShield] = useState(false);
 
   const isEmbed = stream?.type === 'embed';
+  const isLink = stream?.type === 'link';
   const isDirectMp4 = Boolean(
     stream?.type === 'mp4' ||
       (stream?.url && (/\.mp4(?:$|\?)/i.test(stream.url) || String(stream.url).startsWith('/api/archive-stream'))),
   );
-  const effectiveProxy = (useProxy || autoProxied) && !isEmbed;
+  const effectiveProxy = (useProxy || autoProxied) && !isEmbed && !isLink;
 
   const finalUrl = useMemo(() => {
     if (!stream?.url) return '';
@@ -92,6 +93,10 @@ export default function StreamPlayer({
   // Stall watchdog: still loading after STALL_MS -> try proxy once (HLS/MP4), else report failure
   useEffect(() => {
     if (status !== 'loading') return undefined;
+    if (isLink) {
+      setStatus('playing');
+      return undefined;
+    }
     if (isEmbed) {
       // Some cross-origin embed iframes never fire onLoad smoothly; clear spinner after 2.5s so user can click play inside iframe
       const embedTimer = setTimeout(() => {
@@ -112,6 +117,10 @@ export default function StreamPlayer({
   useEffect(() => {
     failedRef.current = false;
     if (!stream?.url) return undefined;
+    if (isLink) {
+      setStatus('playing');
+      return undefined;
+    }
     setStatus('loading');
     if (isEmbed) return undefined;
 
@@ -247,7 +256,25 @@ export default function StreamPlayer({
           </span>
           {subtitle && <span className="text-xs text-gray-400 hidden sm:inline truncate">• {subtitle}</span>}
         </div>
-        {isEmbed ? (
+        {isLink ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#0e111a] to-[#05060a] p-6 text-center gap-3">
+          <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">
+            Official Broadcaster Destination
+          </span>
+          <h3 className="text-lg sm:text-xl font-black text-white">{stream.name || title}</h3>
+          <p className="text-xs text-gray-400 max-w-md">
+            Live game broadcasts are hosted by the official league or network rights holder.
+          </p>
+          <a
+            href={stream.url}
+            target="_blank"
+            rel="noreferrer"
+            className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 transition"
+          >
+            Open Official Broadcast ↗
+          </a>
+        </div>
+      ) : isEmbed ? (
           <button
             type="button"
             onClick={(e) => {
@@ -312,7 +339,25 @@ export default function StreamPlayer({
         </div>
       )}
 
-      {isEmbed ? (
+      {isLink ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#0e111a] to-[#05060a] p-6 text-center gap-3">
+          <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">
+            Official Broadcaster Destination
+          </span>
+          <h3 className="text-lg sm:text-xl font-black text-white">{stream.name || title}</h3>
+          <p className="text-xs text-gray-400 max-w-md">
+            Live game broadcasts are hosted by the official league or network rights holder.
+          </p>
+          <a
+            href={stream.url}
+            target="_blank"
+            rel="noreferrer"
+            className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 transition"
+          >
+            Open Official Broadcast ↗
+          </a>
+        </div>
+      ) : isEmbed ? (
         <iframe
           key={`${stream.url}-${adShield ? 'strict' : 'compat'}-${retrySeed}`}
           src={stream.url}
@@ -336,7 +381,7 @@ export default function StreamPlayer({
         />
       )}
 
-      {!isEmbed && (
+      {!isEmbed && !isLink && (
         <div
           className={`absolute bottom-14 right-3 z-20 flex items-center gap-2 transition-opacity duration-300 ${
             showHud ? 'opacity-100' : 'opacity-0 pointer-events-none'
