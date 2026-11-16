@@ -12,7 +12,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 
-const STALL_MS = 9000;
+const STALL_MS = 5000;
 
 export const FIT_CLASSES = {
   contain: 'object-contain',
@@ -257,24 +257,10 @@ export default function StreamPlayer({
           {subtitle && <span className="text-xs text-gray-400 hidden sm:inline truncate">• {subtitle}</span>}
         </div>
         {isLink ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#0e111a] to-[#05060a] p-6 text-center gap-3">
-          <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">
-            Official Broadcaster Destination
-          </span>
-          <h3 className="text-lg sm:text-xl font-black text-white">{stream.name || title}</h3>
-          <p className="text-xs text-gray-400 max-w-md">
-            Live game broadcasts are hosted by the official league or network rights holder.
-          </p>
-          <a
-            href={stream.url}
-            target="_blank"
-            rel="noreferrer"
-            className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 transition"
-          >
-            Open Official Broadcast ↗
-          </a>
-        </div>
-      ) : isEmbed ? (
+          <div className="flex items-center gap-1.5 bg-amber-950/85 backdrop-blur-md px-2.5 py-1 rounded-md border border-amber-500/40 text-[11px] font-bold text-amber-300">
+            OFFICIAL LINK
+          </div>
+        ) : isEmbed ? (
           <button
             type="button"
             onClick={(e) => {
