@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import dns from 'node:dns/promises';
+import net from 'node:net';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +22,33 @@ function isPrivateHost(hostname) {
   const target = String(hostname || '').trim().toLowerCase();
   if (!target) return true;
   return PRIVATE_HOST_PATTERNS.some((re) => re.test(target));
+}
+
+function isPrivateIpAddress(ip) {
+  const clean = String(ip || '').trim().toLowerCase();
+  if (!clean) return true;
+  if (clean === '::1' || clean === '::' || clean.startsWith('fe80:') || clean.startsWith('fc') || clean.startsWith('fd')) {
+    return true;
+  }
+  if (clean.startsWith('::ffff:')) {
+    return isPrivateIpAddress(clean.slice(7));
+  }
+  if (/^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(clean)) {
+    return true;
+  }
+  return false;
+}
+
+async function resolvesToPrivateIp(hostname) {
+  if (net.isIP(hostname)) {
+    return isPrivateIpAddress(hostname);
+  }
+  try {
+    const records = await dns.lookup(hostname, { all: true });
+    return records.some((r) => isPrivateIpAddress(r.address));
+  } catch {
+    return true;
+  }
 }
 
 function isAllowedHost(hostname) {
@@ -122,9 +151,9 @@ export async function GET(request) {
     );
   }
 
-  if (!isAllowedHost(target.hostname)) {
+  if (!isAllowedHost(target.hostname) || (await resolvesToPrivateIp(target.hostname))) {
     return NextResponse.json(
-      { error: 'Host blocked by SSRF guard or PROXY_ALLOWED_HOSTS.' },
+      { error: 'Host blocked by SSRF guard, DNS check, or PROXY_ALLOWED_HOSTS.' },
       { status: 403, headers: corsHeaders() },
     );
   }
