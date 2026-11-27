@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'AMG VIP // LIVE WIRE — Sports, Anime & OTT Hub',
-  description: 'AMG VIP Live Wire: Streamed.pk live sports, Sub/Dub Anime, ATP/WTA Tennis, multi-view player, and 24/7 channels.'
+  description: 'AMG VIP Live Wire: live sports scores, Sub/Dub Anime, ATP/WTA Tennis, multi-view player, and 24/7 channels.'
 };
 
 export default function RootLayout({ children }) {
