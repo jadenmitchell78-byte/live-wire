@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import {
   AlertTriangle,
   BookOpen,
+  ExternalLink,
   Box,
   Calendar,
   Check,
@@ -37,6 +38,7 @@ import {
 } from 'lucide-react';
 import StreamPlayer from './components/StreamPlayer';
 import NflRedZonePanel from './components/NflRedZonePanel';
+import EspnGamePanel from './components/EspnGamePanel';
 import { MediaCard, MediaRow, SkeletonRow, formatCountdown, FALLBACK_IMG } from './components/MediaCard';
 import { EpisodeGrid } from './components/Episodes';
 import DetailsModal from './components/DetailsModal';
@@ -82,6 +84,65 @@ const saveJson = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 };
+
+function NoLicensedStream({ event }) {
+  const watch = event?.officialWatch;
+  return (
+    <div
+      data-testid="no-licensed-stream"
+      className="w-full aspect-video rounded-xl border border-white/10 bg-gradient-to-br from-[#0e111a] to-black flex flex-col items-center justify-center text-center p-6 gap-3"
+    >
+      <AlertTriangle className="w-10 h-10 text-amber-400" />
+      <p className="text-sm font-bold text-white">No licensed stream available</p>
+      <p className="text-xs text-gray-400 max-w-md">
+        There isn&apos;t an official stream for this title right now. Open the league or broadcaster&apos;s own service to watch it.
+      </p>
+      {watch?.url && (
+        <a
+          href={watch.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-h-[44px] px-5 py-2 rounded-lg bg-[#E50914] hover:bg-[#f6121d] text-white text-xs font-extrabold flex items-center gap-2 transition"
+        >
+          Watch on {watch.label} <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function PlayerSurface({ event, activeServer, hiddenCount, playerProps, onEnableThirdParty }) {
+  if (event?.panel === 'nfl-redzone') {
+    return (
+      <div className="md:col-span-full">
+        <NflRedZonePanel />
+      </div>
+    );
+  }
+  if (event?.panel === 'espn-scoreboard') {
+    return <EspnGamePanel event={event} />;
+  }
+  if (activeServer) {
+    return <StreamPlayer key={activeServer.url} stream={activeServer} {...playerProps} />;
+  }
+  if (hiddenCount === 0) return <NoLicensedStream event={event} />;
+  return (
+    <div className="w-full aspect-video rounded-xl border border-amber-500/30 bg-gradient-to-br from-[#1a1508] to-black flex flex-col items-center justify-center text-center p-6 gap-3">
+      <AlertTriangle className="w-10 h-10 text-amber-400" />
+      <p className="text-sm font-bold text-white">Only third-party sources available</p>
+      <p className="text-xs text-gray-400 max-w-md">
+        {hiddenCount} source{hiddenCount === 1 ? '' : 's'} hidden. These embed sites are unlicensed and may show pop-ups
+        or redirects.
+      </p>
+      <button
+        onClick={onEnableThirdParty}
+        className="min-h-[44px] px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold transition"
+      >
+        Enable 3rd-party sources
+      </button>
+    </div>
+  );
+}
 
 export default function ClientHomePage({ initialCatalog }) {
   const initialEvents = initialCatalog?.events || [];
@@ -487,10 +548,13 @@ export default function ClientHomePage({ initialCatalog }) {
     recordHistory(selectedEvent, { season, episode, position: 0, duration: 0 });
   };
 
-  const secondaryStream = useMemo(() => {
-    const list = resolveServers(secondaryEvent, 1, 1);
-    return (allowThirdParty ? list : list.filter((s) => !s.thirdParty))[0];
-  }, [secondaryEvent, allowThirdParty]);
+  const secondaryResolved = useMemo(() => resolveServers(secondaryEvent, 1, 1), [secondaryEvent]);
+  const secondaryVisible = useMemo(
+    () => (allowThirdParty ? secondaryResolved : secondaryResolved.filter((s) => !s.thirdParty)),
+    [secondaryResolved, allowThirdParty],
+  );
+  const secondaryStream = secondaryVisible[0];
+  const secondaryHidden = secondaryResolved.length - secondaryVisible.length;
 
   // ---------- Catalog views ----------
   const eventMap = useMemo(() => new Map(events.map((e) => [e.id, e])), [events]);
@@ -589,7 +653,7 @@ export default function ClientHomePage({ initialCatalog }) {
   const menuItems = useMemo(
     () => [
       { id: 'Home', label: 'Home', icon: Grid, count: events.length },
-      { id: 'LIVE NOW', label: 'Live Now (Streamed.pk)', icon: Flame, count: liveItems.length },
+      { id: 'LIVE NOW', label: 'Live Now', icon: Flame, count: liveItems.length },
       { id: 'NBA', label: 'NBA Live Plugin', icon: Trophy, count: events.filter((e) => e.category === 'NBA').length },
       { id: 'Studio3D', label: '3D Character Stage', icon: Box, count: 3 },
       { id: 'Webtoons', label: 'Webtoon Studio', icon: BookOpen, count: 3 },
@@ -875,62 +939,38 @@ export default function ClientHomePage({ initialCatalog }) {
             className={`relative ${dimMode ? 'z-[35]' : ''} pt-20 px-3 sm:px-6 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-6xl'} space-y-3`}
           >
             <div className={`grid gap-3 sm:gap-4 ${multiView ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-              {selectedEvent.panel === 'nfl-redzone' ? (
-                <div className="md:col-span-full">
-                  <NflRedZonePanel />
-                </div>
-              ) : activeServer ? (
-                <StreamPlayer
-                  key={activeServer.url}
-                  stream={activeServer}
-                  title={selectedEvent.shortTitle || selectedEvent.title}
-                  subtitle={activeServer.name}
-                  useProxy={useProxy}
-                  isMuted={isMuted}
-                  onToggleMute={() => setIsMuted((m) => !m)}
-                  onFail={handleFail}
-                  onNext={nextServer}
-                  hasNext={hasNext}
-                  startAt={startAt}
-                  onProgress={handleProgress}
-                  fitMode={fitMode}
-                />
-              ) : hiddenCount === 0 ? (
-                <div
-                  data-testid="no-licensed-stream"
-                  className="w-full aspect-video rounded-xl border border-white/10 bg-gradient-to-br from-[#0e111a] to-black flex flex-col items-center justify-center text-center p-6 gap-3"
-                >
-                  <AlertTriangle className="w-10 h-10 text-amber-400" />
-                  <p className="text-sm font-bold text-white">No licensed stream available</p>
-                  <p className="text-xs text-gray-400 max-w-md">
-                    There isn&apos;t an official stream for this title right now. Check the league or broadcaster&apos;s own app for it.
-                  </p>
-                </div>
-              ) : (
-                <div className="w-full aspect-video rounded-xl border border-amber-500/30 bg-gradient-to-br from-[#1a1508] to-black flex flex-col items-center justify-center text-center p-6 gap-3">
-                  <AlertTriangle className="w-10 h-10 text-amber-400" />
-                  <p className="text-sm font-bold text-white">Only third-party sources available</p>
-                  <p className="text-xs text-gray-400 max-w-md">
-                    {hiddenCount} source{hiddenCount === 1 ? '' : 's'} hidden. These embed sites are unlicensed and may show pop-ups
-                    or redirects.
-                  </p>
-                  <button
-                    onClick={toggleThirdParty}
-                    className="min-h-[44px] px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold transition"
-                  >
-                    Enable 3rd-party sources
-                  </button>
-                </div>
-              )}
-              {multiView && secondaryEvent && secondaryStream && (
-                <StreamPlayer
-                  key={`second-${secondaryStream.url}`}
-                  stream={secondaryStream}
-                  title={`#2 · ${secondaryEvent.shortTitle || secondaryEvent.title}`}
-                  subtitle={secondaryStream.name}
-                  useProxy={useProxy}
-                  isMuted
-                  onToggleMute={() => {}}
+              <PlayerSurface
+                event={selectedEvent}
+                activeServer={activeServer}
+                hiddenCount={hiddenCount}
+                onEnableThirdParty={toggleThirdParty}
+                playerProps={{
+                  title: selectedEvent.shortTitle || selectedEvent.title,
+                  subtitle: activeServer?.name,
+                  useProxy,
+                  isMuted,
+                  onToggleMute: () => setIsMuted((m) => !m),
+                  onFail: handleFail,
+                  onNext: nextServer,
+                  hasNext,
+                  startAt,
+                  onProgress: handleProgress,
+                  fitMode,
+                }}
+              />
+              {multiView && secondaryEvent && (
+                <PlayerSurface
+                  event={secondaryEvent}
+                  activeServer={secondaryStream}
+                  hiddenCount={secondaryHidden}
+                  onEnableThirdParty={toggleThirdParty}
+                  playerProps={{
+                    title: `#2 · ${secondaryEvent.shortTitle || secondaryEvent.title}`,
+                    subtitle: secondaryStream?.name,
+                    useProxy,
+                    isMuted: true,
+                    onToggleMute: () => {},
+                  }}
                 />
               )}
             </div>
