@@ -36,6 +36,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import StreamPlayer from './components/StreamPlayer';
+import NflRedZonePanel from './components/NflRedZonePanel';
 import { MediaCard, MediaRow, SkeletonRow, formatCountdown, FALLBACK_IMG } from './components/MediaCard';
 import { EpisodeGrid } from './components/Episodes';
 import DetailsModal from './components/DetailsModal';
@@ -874,7 +875,11 @@ export default function ClientHomePage({ initialCatalog }) {
             className={`relative ${dimMode ? 'z-[35]' : ''} pt-20 px-3 sm:px-6 mx-auto ${theaterMode ? 'max-w-full' : 'max-w-6xl'} space-y-3`}
           >
             <div className={`grid gap-3 sm:gap-4 ${multiView ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-              {activeServer ? (
+              {selectedEvent.panel === 'nfl-redzone' ? (
+                <div className="md:col-span-full">
+                  <NflRedZonePanel />
+                </div>
+              ) : activeServer ? (
                 <StreamPlayer
                   key={activeServer.url}
                   stream={activeServer}
@@ -890,6 +895,17 @@ export default function ClientHomePage({ initialCatalog }) {
                   onProgress={handleProgress}
                   fitMode={fitMode}
                 />
+              ) : hiddenCount === 0 ? (
+                <div
+                  data-testid="no-licensed-stream"
+                  className="w-full aspect-video rounded-xl border border-white/10 bg-gradient-to-br from-[#0e111a] to-black flex flex-col items-center justify-center text-center p-6 gap-3"
+                >
+                  <AlertTriangle className="w-10 h-10 text-amber-400" />
+                  <p className="text-sm font-bold text-white">No licensed stream available</p>
+                  <p className="text-xs text-gray-400 max-w-md">
+                    There isn&apos;t an official stream for this title right now. Check the league or broadcaster&apos;s own app for it.
+                  </p>
+                </div>
               ) : (
                 <div className="w-full aspect-video rounded-xl border border-amber-500/30 bg-gradient-to-br from-[#1a1508] to-black flex flex-col items-center justify-center text-center p-6 gap-3">
                   <AlertTriangle className="w-10 h-10 text-amber-400" />

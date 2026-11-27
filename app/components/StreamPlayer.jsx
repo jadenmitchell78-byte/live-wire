@@ -299,9 +299,11 @@ export default function StreamPlayer({
       {status === 'error' && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-amber-500 mb-2" />
-          <p className="text-sm font-bold text-white mb-1">This server didn&apos;t load</p>
+          <p className="text-sm font-bold text-white mb-1" data-testid="stream-error-title">
+            {hasNext ? "This server didn't load" : 'No licensed stream available'}
+          </p>
           <p className="text-xs text-gray-400 max-w-md mb-4">
-            {hasNext ? 'Switching to the next server…' : 'All servers tried. Retry, toggle Proxy, or use Open Source.'}
+            {hasNext ? 'Switching to the next server…' : 'No working source right now. Retry, toggle Proxy, or use Open Source.'}
           </p>
           <div className="flex gap-2">
             <button
@@ -355,7 +357,7 @@ export default function StreamPlayer({
           }`}
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
-          referrerPolicy="no-referrer"
+          referrerPolicy={/(^|\.)youtube(-nocookie)?\.com\//.test(String(stream.url).replace(/^https?:\/\//, '')) ? 'strict-origin-when-cross-origin' : 'no-referrer'}
         />
       ) : (
         <video
